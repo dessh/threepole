@@ -3,6 +3,11 @@
     windows_subsystem = "windows"
 )]
 
+use std::{
+    collections::{HashMap, HashSet},
+    time::Duration,
+};
+
 use anyhow::{anyhow, Error};
 use api::{
     make_request,
@@ -17,10 +22,6 @@ use config::Config;
 use consts::{APP_NAME, POLL_INTERVAL, RAID_ACTIVITY_TYPE};
 use poller::poll_focus;
 use serde::Serialize;
-use std::{
-    collections::{HashMap, HashSet},
-    time::Duration,
-};
 use tauri::{
     async_runtime, AppHandle, CustomMenuItem, Manager, State, SystemTray, SystemTrayEvent,
     SystemTrayMenu, SystemTrayMenuItem, WindowBuilder, WindowUrl,

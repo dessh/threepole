@@ -1,5 +1,6 @@
-use raw_window_handle::{HasRawWindowHandle, RawWindowHandle};
 use std::{collections::HashMap, path::PathBuf};
+
+use raw_window_handle::{HasRawWindowHandle, RawWindowHandle};
 use tauri::{PhysicalPosition, PhysicalSize};
 use widestring::Utf16String;
 use windows::Win32::{

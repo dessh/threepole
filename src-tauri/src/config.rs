@@ -1,9 +1,11 @@
-use crate::consts::APP_NAME;
+use std::path::PathBuf;
+
 use anyhow::{anyhow, Result};
 use directories::BaseDirs;
 use serde::{Deserialize, Serialize};
-use std::path::PathBuf;
 use tokio::fs::{create_dir_all, read_to_string};
+
+use crate::consts::APP_NAME;
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct Config {

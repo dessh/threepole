@@ -1,11 +1,13 @@
-use crate::consts::{API_KEY, API_PATH};
-use reqwest::{Client, Method, RequestBuilder};
-use serde::Deserialize;
-use serde_json::{json, Value};
 use std::{
     error::Error,
     fmt::{Display, Formatter},
 };
+
+use reqwest::{Client, Method, RequestBuilder};
+use serde::Deserialize;
+use serde_json::{json, Value};
+
+use crate::consts::{API_KEY, API_PATH};
 
 pub mod responses;
 

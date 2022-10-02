@@ -1,6 +1,7 @@
+use std::{cmp::Ordering, collections::HashMap};
+
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Deserializer, Serialize};
-use std::{cmp::Ordering, collections::HashMap};
 
 #[derive(Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
