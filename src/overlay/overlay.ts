@@ -14,12 +14,12 @@ const dailyElem = document.querySelector<HTMLElement>("#daily")!;
 let currentActivity: {
     startTime: Date,
     isRaid: boolean,
-} | null = null;
+} | null;
 
 let latestActivityCompleted: {
     period: Date,
-    instanceId: string,
-} | null = null;
+    instanceId: string | null,
+} | null;
 
 let shown = false;
 
@@ -34,38 +34,38 @@ function init() {
         shown = false;
     });
 
-    appWindow.listen("force_refresh", () => {
-        currentActivity = null;
-        latestActivityCompleted = null;
-        forceRefresh().catch(e => {
-            createPopup({ title: "Failed to fetch initial stats", subtext: e })
-        });
-    });
+    appWindow.listen("force_refresh", () => forceRefresh());
 
-    forceRefresh().catch(e => {
-        createPopup({ title: "Failed to fetch initial stats", subtext: e });
-    }).finally(() => {
-        setInterval(() => refreshActivity(false), 2000);
-        setInterval(() => refreshHistory(false), 10000);
-        setInterval(stopwatchTick, 1 / 60);
-    });
+    setInterval(stopwatchTick, 1 / 60);
 
-    invoke("get_config").then((c: any) => {
-        if (c) {
-            createPopup({ title: `${c.display_name}#${c.display_tag}`, subtext: "Threepole is active." });
-        }
-    });
+    forceRefresh();
 }
 
 async function forceRefresh() {
+    currentActivity = null;
+    latestActivityCompleted = null;
+
     loaderElem.classList.remove("hidden");
     widgetElem.classList.add("hidden");
 
-    await refreshActivity(true);
-    await refreshHistory(true);
+    try {
+        await refreshActivity(true);
+        await refreshHistory(true);
+
+        invoke("get_config").then((c: any) => {
+            if (c) {
+                createPopup({ title: `${c.display_name}#${c.display_tag}`, subtext: "Threepole is active." });
+            }
+        });
+    } catch (e: any) {
+        createPopup({ title: "Failed to fetch initial stats", subtext: "" + e });
+    }
 
     loaderElem.classList.add("hidden");
     widgetElem.classList.remove("hidden");
+
+    setInterval(() => refreshActivity(false), 2000);
+    setInterval(() => refreshHistory(false), 10000);
 }
 
 async function refreshActivity(force: boolean) {
@@ -76,7 +76,7 @@ async function refreshActivity(force: boolean) {
     let res: any = await invoke("get_current_activity");
 
     let newTime = new Date(res.latest_activity_started);
-    if (!currentActivity || newTime > currentActivity.startTime) {
+    if (!currentActivity || newTime > currentActivity.startTime) { // In case Bungie API returns an old current activity (can happen)
         currentActivity = { startTime: newTime, isRaid: res.is_raid };
     }
 
@@ -95,15 +95,15 @@ async function refreshHistory(force: boolean) {
     let res: any = await invoke("get_history");
 
     let newTime = new Date(res.latest_activity_completed?.period);
-    if (!latestActivityCompleted || newTime > latestActivityCompleted?.period) {
-        if (!force && (!latestActivityCompleted || latestActivityCompleted.instanceId != res.latest_activity_completed?.instance_id)) {
+    if (!latestActivityCompleted || newTime > latestActivityCompleted?.period) { // In case Bungie API returns an old activity history list
+        if (latestActivityCompleted && res.latest_activity_completed && latestActivityCompleted.instanceId != res.latest_activity_completed.instance_id) {
             createPopup({ title: "Raid clear result", subtext: `API Time: <strong>${res.latest_activity_completed.activity_duration}</strong>` });
         }
 
-        latestActivityCompleted = res.latest_activity_completed ? {
+        latestActivityCompleted = {
             period: newTime,
-            instanceId: res.latest_activity_completed.instance_id,
-        } : null;
+            instanceId: res.latest_activity_completed?.instance_id,
+        };
 
         dailyElem.innerText = res.total_today;
     }
