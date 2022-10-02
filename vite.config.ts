@@ -1,4 +1,5 @@
 import { defineConfig } from "vite";
+import { svelte } from "@sveltejs/vite-plugin-svelte";
 
 export default defineConfig({
     // prevent vite from obscuring rust errors
@@ -21,8 +22,9 @@ export default defineConfig({
         rollupOptions: {
             input: {
                 overlay: "overlay.html",
-                setup: "setup.html"
+                profile: "profile.html"
             }
         }
     },
+    plugins: [svelte()]
 })

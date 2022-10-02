@@ -291,8 +291,8 @@ async fn get_history(
     })
 }
 
-fn create_setup_window(handle: &AppHandle) -> Result<(), tauri::Error> {
-    WindowBuilder::new(handle, "setup", WindowUrl::App("setup.html".into()))
+fn create_profile_window(handle: &AppHandle) -> Result<(), tauri::Error> {
+    WindowBuilder::new(handle, "profile", WindowUrl::App("profile.html".into()))
         .title(APP_NAME)
         .transparent(true)
         .decorations(false)
@@ -351,9 +351,9 @@ fn main() -> anyhow::Result<()> {
             if let SystemTrayEvent::MenuItemClick { id, .. } = event {
                 match id.as_str() {
                     "exit" => app.exit(0),
-                    "set_profile" => match app.get_window("setup") {
+                    "set_profile" => match app.get_window("profile") {
                         Some(w) => w.set_focus(),
-                        None => create_setup_window(app),
+                        None => create_profile_window(app),
                     }
                     .unwrap(),
                     _ => (),
@@ -382,7 +382,7 @@ fn main() -> anyhow::Result<()> {
                 if lock.get_profiles().selected_profile.is_some() {
                     create_overlay(&handle).unwrap();
                 } else {
-                    create_setup_window(&handle).unwrap();
+                    create_profile_window(&handle).unwrap();
                 }
             });
 

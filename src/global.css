@@ -38,14 +38,13 @@
     outline: none;
     border: none;
     overflow: hidden;
+    font-family: "Inter Tight";
 }
 
 html,
-body,
-main {
+body {
     width: 100vw;
     height: 100vh;
-    /* background-color: aqua; */
 }
 
 :root {
@@ -57,4 +56,24 @@ main {
 
     --primary-background: #12171c;
     --secondary-background: #180f1c;
+}
+
+::selection {
+    background: var(--primary-highlight);
+}
+
+::-webkit-scrollbar {
+    width: 10px;
+}
+
+::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.2);
 }

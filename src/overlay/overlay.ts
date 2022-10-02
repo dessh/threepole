@@ -12,13 +12,13 @@ const msElem = document.querySelector<HTMLElement>("#ms")!;
 const dailyElem = document.querySelector<HTMLElement>("#daily")!;
 
 let currentActivity: {
-    startTime: Date,
-    isRaid: boolean,
+    startTime: Date;
+    isRaid: boolean;
 } | null;
 
 let latestActivityCompleted: {
-    period: Date,
-    instanceId: string | null,
+    period: Date;
+    instanceId: string | null;
 } | null;
 
 let shown = false;
