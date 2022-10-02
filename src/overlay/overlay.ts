@@ -34,7 +34,7 @@ function init() {
         shown = false;
     });
 
-    appWindow.listen("force_refresh", () => forceRefresh());
+    appWindow.listen("update_profiles", () => forceRefresh());
 
     setInterval(stopwatchTick, 1 / 60);
 
