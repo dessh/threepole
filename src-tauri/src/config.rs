@@ -1,32 +1,72 @@
-use std::path::PathBuf;
+use std::{
+    fs::{create_dir_all, read_to_string},
+    io::ErrorKind,
+    path::PathBuf,
+};
 
 use anyhow::{anyhow, Result};
 use directories::BaseDirs;
-use serde::{Deserialize, Serialize};
-use tokio::fs::{create_dir_all, read_to_string};
+use serde::{de::DeserializeOwned, Serialize};
 
+use self::{prefs::Prefs, profiles::Profiles};
 use crate::consts::APP_NAME;
 
-#[derive(Serialize, Deserialize, Clone)]
-pub struct Config {
-    pub account_platform: usize,
-    pub account_id: String,
-    pub display_name: String,
-    pub display_tag: usize,
+pub mod prefs;
+pub mod profiles;
+
+pub struct ConfigManager {
+    prefs: Prefs,
+    profiles: Profiles,
 }
 
-impl Config {
-    pub async fn load() -> Result<Self> {
-        let str = read_to_string(Self::get_path()?).await?;
-        Ok(serde_json::from_str::<Config>(&str)?)
+impl ConfigManager {
+    pub fn load() -> Result<Self> {
+        Ok(Self {
+            prefs: Prefs::load()?,
+            profiles: Profiles::load()?,
+        })
     }
 
-    pub async fn write(&self) -> Result<()> {
+    pub fn get_prefs(&self) -> &Prefs {
+        &self.prefs
+    }
+
+    pub fn get_profiles(&self) -> &Profiles {
+        &self.profiles
+    }
+
+    pub fn set_prefs(&mut self, prefs: Prefs) -> Result<()> {
+        self.prefs = prefs;
+        self.prefs.write()
+    }
+
+    pub fn set_profiles(&mut self, profiles: Profiles) -> Result<()> {
+        self.profiles = profiles;
+        self.profiles.write()
+    }
+}
+
+trait ConfigFile: Serialize + DeserializeOwned + Default {
+    fn load() -> Result<Self> {
+        match read_to_string(Self::get_path()?) {
+            Ok(s) => Ok(serde_json::from_str::<Self>(&s)?),
+            Err(e) => match e.kind() {
+                ErrorKind::NotFound => {
+                    let def = Self::default();
+                    def.write()?;
+                    Ok(def)
+                }
+                _ => Err(e.into()),
+            },
+        }
+    }
+
+    fn write(&self) -> Result<()> {
         let path = Self::get_path()?;
         let mut dir = path.clone();
         dir.pop();
 
-        create_dir_all(dir).await?;
+        create_dir_all(dir)?;
 
         Ok(std::fs::write(path, serde_json::to_string(&self)?)?)
     }
@@ -36,9 +76,11 @@ impl Config {
             .map(|d| {
                 let mut path = d.data_dir().to_owned();
                 path.push(APP_NAME);
-                path.push("config.json");
+                path.push(Self::get_filename());
                 path
             })
-            .ok_or(anyhow!("no config path for os"))
+            .ok_or(anyhow!("No data_dir available"))
     }
+
+    fn get_filename() -> &'static str;
 }

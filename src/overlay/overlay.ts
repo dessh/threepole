@@ -52,13 +52,15 @@ async function forceRefresh() {
         await refreshActivity(true);
         await refreshHistory(true);
 
-        invoke("get_config").then((c: any) => {
-            if (c) {
-                createPopup({ title: `${c.display_name}#${c.display_tag}`, subtext: "Threepole is active." });
+        invoke("get_profiles").then((p: any) => {
+            let selectedProfile = p.selectedProfile;
+
+            if (selectedProfile) {
+                createPopup({ title: `${selectedProfile.displayName}#${selectedProfile.displayTag}`, subtext: "Threepole is active." });
             }
         });
     } catch (e: any) {
-        createPopup({ title: "Failed to fetch initial stats", subtext: "" + e });
+        createPopup({ title: "Failed to fetch initial stats", subtext: e.message });
     }
 
     loaderElem.classList.add("hidden");

@@ -16,11 +16,13 @@ const results = document.querySelector<HTMLDivElement>("#results")!;
 let selected: any;
 
 function init() {
-    invoke("get_config").then((c: any) => {
-        if (c) {
+    invoke("get_profiles").then((p: any) => {
+        let selectedProfile = p.selectedProfile;
+
+        if (selectedProfile) {
             mainHeader.innerText = "Welcome back";
             subHeader.innerText = "Want to switch accounts?";
-            inputElem.value = `${c.display_name}#${c.display_tag}`;
+            inputElem.value = `${selectedProfile.displayName}#${selectedProfile.displayTag}`;
             updatePlaceholder();
         }
     });
@@ -99,12 +101,14 @@ function displaySearchResults(array: any) {
     button.disabled = true;
 
     button.addEventListener("click", () => {
-        invoke("set_config", {
-            config: {
-                account_platform: selected.membershipType,
-                account_id: selected.membershipId,
-                display_name: selected.bungieGlobalDisplayName,
-                display_tag: selected.bungieGlobalDisplayNameCode,
+        invoke("set_profiles", {
+            profiles: {
+                selectedProfile: {
+                    accountPlatform: selected.membershipType,
+                    accountId: selected.membershipId,
+                    displayName: selected.bungieGlobalDisplayName,
+                    displayTag: selected.bungieGlobalDisplayNameCode,
+                }
             }
         }).then(() => appWindow.close()).catch(e => {
             appWindow.show();

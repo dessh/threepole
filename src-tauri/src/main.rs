@@ -18,7 +18,7 @@ use api::{
     BungieRequest, BungieResponseError,
 };
 use chrono::{DateTime, Utc};
-use config::Config;
+use config::{prefs::Prefs, profiles::Profiles, ConfigManager};
 use consts::{APP_NAME, POLL_INTERVAL, RAID_ACTIVITY_TYPE};
 use poller::poll_focus;
 use serde::Serialize;
@@ -33,8 +33,7 @@ mod config;
 mod consts;
 mod poller;
 
-#[derive(Default)]
-struct ConfigContainer(Mutex<Option<Config>>);
+struct ConfigContainer(Mutex<ConfigManager>);
 
 #[derive(Default)]
 struct ActivityTypes(Mutex<HashMap<usize, usize>>);
@@ -91,23 +90,46 @@ async fn search_profile(
 }
 
 #[tauri::command]
-async fn get_config(container: State<'_, ConfigContainer>) -> Result<Option<Config>, ()> {
-    Ok(container.0.lock().await.clone())
+async fn get_prefs(container: State<'_, ConfigContainer>) -> Result<Prefs, ()> {
+    Ok(container.0.lock().await.get_prefs().clone())
 }
 
 #[tauri::command]
-async fn set_config(
+async fn set_prefs(
     app: AppHandle,
-    config: Config,
+    prefs: Prefs,
     container: State<'_, ConfigContainer>,
 ) -> Result<(), ()> {
-    config.write().await.unwrap();
+    let prefs_clone = prefs.clone();
 
     let mut lock = container.0.lock().await;
-    *lock = Some(config);
+    lock.set_prefs(prefs).unwrap();
 
     if let Some(o) = app.get_window("overlay") {
-        o.emit("force_refresh", ()).unwrap();
+        o.emit("update_prefs", prefs_clone.clone()).unwrap();
+    }
+
+    Ok(())
+}
+
+#[tauri::command]
+async fn get_profiles(container: State<'_, ConfigContainer>) -> Result<Profiles, ()> {
+    Ok(container.0.lock().await.get_profiles().clone())
+}
+
+#[tauri::command]
+async fn set_profiles(
+    app: AppHandle,
+    profiles: Profiles,
+    container: State<'_, ConfigContainer>,
+) -> Result<(), ()> {
+    let profiles_clone = profiles.clone();
+
+    let mut lock = container.0.lock().await;
+    lock.set_profiles(profiles).unwrap();
+
+    if let Some(o) = app.get_window("overlay") {
+        o.emit("update_profiles", profiles_clone).unwrap();
     } else {
         create_overlay(&app).unwrap();
     }
@@ -124,7 +146,7 @@ async fn get_current_activity(
     let (membership_type, membership_id) = {
         let lock = container.0.lock().await;
 
-        match lock.as_ref() {
+        match &lock.get_profiles().selected_profile {
             Some(c) => (c.account_platform, c.account_id.clone()),
             None => return Err(SerializableError(anyhow!("No profile set"))),
         }
@@ -202,7 +224,7 @@ async fn get_history(
     let (membership_type, membership_id) = {
         let lock = container.0.lock().await;
 
-        match lock.as_ref() {
+        match &lock.get_profiles().selected_profile {
             Some(c) => (c.account_platform, c.account_id.clone()),
             None => return Err(SerializableError(anyhow!("No profile set"))),
         }
@@ -338,23 +360,26 @@ fn main() -> anyhow::Result<()> {
                 }
             }
         })
-        .manage(ConfigContainer::default())
+        .manage(ConfigContainer(Mutex::new(ConfigManager::load()?)))
         .manage(ActivityTypes::default())
         .manage(CharacterIds::default())
         .invoke_handler(tauri::generate_handler![
-            get_config,
+            get_prefs,
+            set_prefs,
+            get_profiles,
+            set_profiles,
             search_profile,
-            set_config,
             get_current_activity,
             get_history,
         ])
         .setup(|app| {
             let handle = app.handle();
+
             async_runtime::spawn(async move {
-                if let Ok(c) = Config::load().await {
-                    let container = handle.state::<ConfigContainer>();
-                    let mut lock = container.0.lock().await;
-                    *lock = Some(c);
+                let container = handle.state::<ConfigContainer>();
+                let lock = container.0.lock().await;
+
+                if lock.get_profiles().selected_profile.is_some() {
                     create_overlay(&handle).unwrap();
                 } else {
                     create_setup_window(&handle).unwrap();
