@@ -106,7 +106,10 @@ function displaySearchResults(array: any) {
                 display_name: selected.bungieGlobalDisplayName,
                 display_tag: selected.bungieGlobalDisplayNameCode,
             }
-        }).then(appWindow.close);
+        }).then(() => appWindow.close()).catch(e => {
+            appWindow.show();
+            displayError(e);
+        });
 
         appWindow.hide();
     });
