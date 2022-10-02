@@ -1,0 +1,243 @@
+main {
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #fff;
+    font-family: "Inter Tight";
+}
+
+::selection {
+    background: var(--primary-highlight);
+}
+
+::-webkit-scrollbar {
+    width: 10px;
+}
+
+::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+svg {
+    fill: #aaa;
+}
+
+button {
+    cursor: pointer;
+}
+
+button:disabled {
+    cursor: not-allowed;
+}
+
+.background {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: linear-gradient(200deg, var(--primary-background), var(--secondary-background));
+    z-index: -10;
+}
+
+.titlebar {
+    height: 28px;
+}
+
+.titlebar button {
+    float: right;
+    width: 32px;
+    height: 28px;
+    transition: background-color 0.1s;
+    background-color: none;
+    cursor: default;
+}
+
+.titlebar button svg {
+    padding: 4px 6px;
+    transition: fill 0.1s;
+}
+
+.titlebar button:hover {
+    background-color: var(--primary-highlight);
+}
+
+.titlebar button:hover svg {
+    fill: #fff;
+}
+
+.content {
+    flex: 1;
+    overflow-y: auto;
+}
+
+.header {
+    margin: 24px 48px;
+}
+
+.header h1 {
+    margin-bottom: 8px;
+}
+
+.search {
+    text-align: center;
+    position: relative;
+}
+
+.search input {
+    font-family: "Inter Tight";
+    width: 60vw;
+    height: 40px;
+    font-size: 20px;
+    color: #fff;
+    border-bottom: 1px solid;
+    border-image-slice: 1;
+    border-image-source: linear-gradient(90deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.1));
+    transition: border-image-source 0.1s;
+    vertical-align: middle;
+    padding-right: 40px;
+    box-sizing: border-box;
+}
+
+.search input:hover,
+.search input:focus {
+    border-image-source: linear-gradient(90deg, var(--secondary-highlight-light), var(--primary-highlight-light));
+}
+
+#input-placeholder {
+    position: absolute;
+    left: calc(40vw / 2);
+    width: calc(60vw - 40px);
+    height: 40px;
+    color: #aaa;
+    font-size: 20px;
+    line-height: 41px;
+    text-align: left;
+    pointer-events: none;
+    white-space: nowrap;
+}
+
+.invisible {
+    opacity: 0;
+}
+
+.search button {
+    position: absolute;
+    left: 70vw;
+    width: 40px;
+    height: 40px;
+    vertical-align: middle;
+}
+
+.search button svg {
+    padding: 8px;
+    transition: fill 0.1s;
+}
+
+.search button:not(:disabled) svg {
+    fill: var(--primary-highlight-light);
+}
+
+#loader {
+    position: absolute;
+    left: 50%;
+    transform: translate(-50%, 20px);
+    z-index: -1;
+    pointer-events: none;
+    transition: opacity 0.1s;
+}
+
+#loader svg {
+    height: 72px;
+}
+
+#loader circle {
+    stroke: var(--primary-highlight);
+}
+
+#results {
+    text-align: center;
+    width: 60vw;
+    margin: 0 auto;
+    margin-top: 8px;
+    /* for confirm button */
+    padding-bottom: calc(36px + 36px);
+    position: relative;
+}
+
+#results p {
+    color: #aaa;
+    font-size: 12px;
+    text-align: left;
+    margin-bottom: 20px;
+}
+
+#results p.error {
+    color: #b53e3e;
+}
+
+#results .result {
+    padding: 16px;
+    text-align: left;
+    border: 1px solid;
+    border-image-source: linear-gradient(90deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.1));
+    cursor: pointer;
+    border-image-slice: 1;
+    transition: border-image-source 0.1s;
+    margin-top: 12px;
+}
+
+#results .result:hover,
+#results .result.selected {
+    border-image-source: linear-gradient(90deg, var(--secondary-highlight-light), var(--primary-highlight-light));
+}
+
+.result .platform-icon {
+    display: inline-block;
+    width: 24px;
+    height: 24px;
+    vertical-align: middle;
+    margin-right: 8px;
+    background-size: contain;
+}
+
+.result span {
+    font-size: 16px;
+    vertical-align: middle;
+}
+
+#results .confirm-wrapper {
+    position: absolute;
+    width: 100%;
+    bottom: 24px;
+    text-align: right;
+}
+
+#results .confirm {
+    color: #eee;
+    padding: 8px 10px;
+    font-family: "Inter Tight";
+    font-size: 14px;
+    transition: box-shadow 0.2s, color 0.1s;
+    box-shadow: 0 -1px 0 var(--primary-highlight) inset;
+    height: 36px;
+}
+
+#results .confirm:hover:not(:disabled) {
+    color: #fff;
+    box-shadow: 0 -4px 0 var(--primary-highlight) inset;
+}
+
+#results .confirm:disabled {
+    color: #777;
+    box-shadow: 0 -1px 0 rgba(255, 255, 255, 0.1) inset;
+}

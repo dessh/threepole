@@ -1,0 +1,44 @@
+{
+    "build": {
+        "beforeBuildCommand": "yarn build",
+        "beforeDevCommand": "yarn dev",
+        "devPath": "http://localhost:5173",
+        "distDir": "../dist"
+    },
+    "package": {
+        "productName": "threepole",
+        "version": "../package.json"
+    },
+    "tauri": {
+        "allowlist": {
+            "all": true
+        },
+        "bundle": {
+            "active": true,
+            "category": "Utility",
+            "icon": [
+                "./icons/icon.ico"
+            ],
+            "identifier": "sh.des.threepole",
+            "shortDescription": "",
+            "targets": [
+                "msi",
+                "updater"
+            ],
+            "windows": {
+                "certificateThumbprint": null,
+                "digestAlgorithm": "sha256",
+                "timestampUrl": ""
+            }
+        },
+        "security": {
+            "csp": "default-src 'self' object-src 'none'"
+        },
+        "systemTray": {
+            "iconPath": "./icons/icon.ico"
+        },
+        "updater": {
+            "active": false
+        }
+    }
+}

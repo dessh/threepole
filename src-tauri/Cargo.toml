@@ -1,0 +1,33 @@
+[package]
+name = "app"
+default-run = "app"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.57"
+
+[build-dependencies]
+tauri-build = { version = "1.1.1", features = [] }
+
+[dependencies]
+serde_json = "1.0"
+serde = { version = "1.0", features = ["derive"] }
+tauri = { git = "https://github.com/tauri-apps/tauri.git", features = ["api-all", "system-tray"] }
+windows = { version = "0.41", features = ["Win32_Foundation", "Win32_UI_WindowsAndMessaging", "Win32_System_ProcessStatus", "Win32_System_Threading"] }
+tokio = { version = "1.21", features = ["macros", "time", "sync", "net"] }
+anyhow = "1.0"
+widestring = "1.0"
+directories = "4.0"
+reqwest = "0.11"
+chrono = { version = "0.4", features = ["serde"] }
+raw-window-handle = "0.5"
+
+[features]
+# by default Tauri runs in production mode
+# when `tauri dev` runs it is executed with `cargo run --no-default-features` if `devPath` is an URL
+default = ["custom-protocol"]
+# this feature is used for production builds where `devPath` points to the filesystem
+# DO NOT remove this
+custom-protocol = ["tauri/custom-protocol"]
+
+[profile.release]
+strip = true

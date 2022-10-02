@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Setup</title>
+    <script defer type="module" src="src/setup/setup.ts"></script>
+</head>
+
+<body>
+    <main>
+        <div class="background"></div>
+        <div class="titlebar" data-tauri-drag-region>
+            <button id="exit-button"><svg xmlns="http://www.w3.org/2000/svg">
+                    <path
+                        d="M6.062 15 5 13.938 8.938 10 5 6.062 6.062 5 10 8.938 13.938 5 15 6.062 11.062 10 15 13.938 13.938 15 10 11.062Z" />
+                </svg></button>
+        </div>
+        <div class="content">
+            <div class="header">
+                <h1 id="main-header">Welcome</h1>
+                <p id="sub-header">Enter your Bungie ID below.</p>
+            </div>
+            <div class="search">
+                <p id="input-placeholder">Profile#0000</p>
+                <input id="input-profile" spellcheck="false" maxlength="31"><button id="input-submit" disabled><svg
+                        xmlns="http://www.w3.org/2000/svg">
+                        <path
+                            d="m19.6 21-6.3-6.3q-.75.6-1.725.95Q10.6 16 9.5 16q-2.725 0-4.612-1.887Q3 12.225 3 9.5q0-2.725 1.888-4.613Q6.775 3 9.5 3t4.613 1.887Q16 6.775 16 9.5q0 1.1-.35 2.075-.35.975-.95 1.725l6.3 6.3ZM9.5 14q1.875 0 3.188-1.312Q14 11.375 14 9.5q0-1.875-1.312-3.188Q11.375 5 9.5 5 7.625 5 6.312 6.312 5 7.625 5 9.5q0 1.875 1.312 3.188Q7.625 14 9.5 14Z" />
+                    </svg></button>
+            </div>
+            <div id="loader" class="invisible">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid">
+                    <circle cx="50" cy="50" r="0" fill="none" stroke-width="5">
+                        <animate attributeName="r" repeatCount="indefinite" dur="1s" values="0;40" keyTimes="0;1"
+                            keySplines="0 0.2 0.8 1" calcMode="spline" begin="0s"></animate>
+                        <animate attributeName="opacity" repeatCount="indefinite" dur="1s" values="1;0" keyTimes="0;1"
+                            keySplines="0.2 0 0.8 1" calcMode="spline" begin="0s"></animate>
+                    </circle>
+                    <circle cx="50" cy="50" r="0" fill="none" stroke-width="5">
+                        <animate attributeName="r" repeatCount="indefinite" dur="1s" values="0;40" keyTimes="0;1"
+                            keySplines="0 0.2 0.8 1" calcMode="spline" begin="-0.5s"></animate>
+                        <animate attributeName="opacity" repeatCount="indefinite" dur="1s" values="1;0" keyTimes="0;1"
+                            keySplines="0.2 0 0.8 1" calcMode="spline" begin="-0.5s"></animate>
+                    </circle>
+                </svg>
+            </div>
+            <div id="results"></div>
+        </div>
+    </main>
+</body>
+
+</html>
