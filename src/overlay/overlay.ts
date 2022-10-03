@@ -113,7 +113,7 @@ async function refreshActivity(force: boolean) {
     let res: any = await invoke("get_current_activity");
 
     let newTime = new Date(res.latest_activity_started);
-    if (!currentActivity || newTime > currentActivity.startTime) { // In case Bungie API returns an old current activity (can happen)
+    if (!currentActivity || newTime >= currentActivity.startTime) { // In case Bungie API returns an old current activity (can happen)
         currentActivity = { startTime: newTime, isRaid: res.is_raid };
     }
 
@@ -132,7 +132,7 @@ async function refreshHistory(force: boolean) {
     let res: any = await invoke("get_history");
 
     let newTime = new Date(res.latest_activity_completed?.period);
-    if (!latestActivityCompleted || newTime > latestActivityCompleted?.period) { // In case Bungie API returns an old activity history list
+    if (!latestActivityCompleted || newTime >= latestActivityCompleted?.period) { // In case Bungie API returns an old activity history list
         if (latestActivityCompleted && res.latest_activity_completed && latestActivityCompleted.instanceId != res.latest_activity_completed.instance_id && prefs?.displayClearNotifications) {
             createPopup({ title: "Raid clear result", subtext: `API Time: <strong>${res.latest_activity_completed.activity_duration}</strong>` });
         }
