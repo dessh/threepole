@@ -23,24 +23,36 @@
         sub: "Enter your Bungie ID below.",
     };
 
-    let selectedProfile: Profile | null;
+    let selectedProfile: Profile;
     let input = "";
     let placeholder = { hidden: "", shown: "Profile#0000" };
-    let state: ProfileResults | null = {
+    let state: ProfileResults = {
         profiles: [],
         wasSearch: false,
     }; // TODO: null, and update on load
-    let error: string | null = null;
+    let error: string = null;
 
     let searchButton: HTMLButtonElement;
+
+    $: updatePlaceholder(input);
+
+    function init() {
+        invoke("get_profiles").then((p: any) => {
+            let selectedProfile = p.selectedProfile;
+
+            if (selectedProfile) {
+                headerText.main = "Welcome back";
+                headerText.sub = "Want to switch accounts?";
+                input = `${selectedProfile.displayName}#${selectedProfile.displayTag}`;
+            }
+        });
+    }
 
     function inputKeyDown(e: KeyboardEvent) {
         if (e.code == "Enter") {
             searchButton.click();
         }
     }
-
-    $: updatePlaceholder(input);
 
     function isProfileResults(s: any): boolean {
         return s && s.wasSearch !== null;
@@ -59,18 +71,6 @@
         })
             .then((p: Profile[]) => (state = { profiles: p, wasSearch: true }))
             .catch((e) => (error = e));
-    }
-
-    function init() {
-        invoke("get_profiles").then((p: any) => {
-            let selectedProfile = p.selectedProfile;
-
-            if (selectedProfile) {
-                headerText.main = "Welcome back";
-                headerText.sub = "Want to switch accounts?";
-                input = `${selectedProfile.displayName}#${selectedProfile.displayTag}`;
-            }
-        });
     }
 
     function updatePlaceholder(newValue) {

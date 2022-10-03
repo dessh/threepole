@@ -9,6 +9,7 @@ const widgetElem = document.querySelector<HTMLElement>("#widget")!;
 const stopwatchElem = document.querySelector<HTMLElement>("#stopwatch")!;
 const timeElem = document.querySelector<HTMLElement>("#time")!;
 const msElem = document.querySelector<HTMLElement>("#ms")!;
+const counterElem = document.querySelector<HTMLElement>("#counter")!;
 const dailyElem = document.querySelector<HTMLElement>("#daily")!;
 
 let currentActivity: {
@@ -22,6 +23,7 @@ let latestActivityCompleted: {
 } | null;
 
 let shown = false;
+let shouldNotifyRaid = true;
 
 function init() {
     appWindow.listen("show", () => {
@@ -34,14 +36,30 @@ function init() {
         shown = false;
     });
 
-    appWindow.listen("update_profiles", () => forceRefresh());
+    appWindow.listen("update_profiles", (p) => forceRefresh(p.payload));
+    appWindow.listen("update_preferences", (p) => applyPreferences(p.payload));
 
     setInterval(stopwatchTick, 1 / 60);
 
-    forceRefresh();
+    invoke("get_profiles").then((p) => forceRefresh(p));
+    invoke("get_preferences").then((p) => applyPreferences(p));
 }
 
-async function forceRefresh() {
+function applyPreferences(p: any) {
+    console.log(p);
+
+    if (p.displayDailyClears) {
+        counterElem.classList.remove("hidden");
+    } else {
+        counterElem.classList.add("hidden");
+    }
+
+    shouldNotifyRaid = p.displayClearNotifications;
+}
+
+async function forceRefresh(p: any) {
+    console.log(p);
+
     currentActivity = null;
     latestActivityCompleted = null;
 
@@ -52,13 +70,11 @@ async function forceRefresh() {
         await refreshActivity(true);
         await refreshHistory(true);
 
-        invoke("get_profiles").then((p: any) => {
-            let selectedProfile = p.selectedProfile;
+        let selectedProfile = p.selectedProfile;
 
-            if (selectedProfile) {
-                createPopup({ title: `${selectedProfile.displayName}#${selectedProfile.displayTag}`, subtext: "Threepole is active." });
-            }
-        });
+        if (selectedProfile) {
+            createPopup({ title: `${selectedProfile.displayName}#${selectedProfile.displayTag}`, subtext: "Threepole is active." });
+        }
     } catch (e: any) {
         createPopup({ title: "Failed to fetch initial stats", subtext: e.message });
     }
@@ -98,7 +114,7 @@ async function refreshHistory(force: boolean) {
 
     let newTime = new Date(res.latest_activity_completed?.period);
     if (!latestActivityCompleted || newTime > latestActivityCompleted?.period) { // In case Bungie API returns an old activity history list
-        if (latestActivityCompleted && res.latest_activity_completed && latestActivityCompleted.instanceId != res.latest_activity_completed.instance_id) {
+        if (latestActivityCompleted && res.latest_activity_completed && latestActivityCompleted.instanceId != res.latest_activity_completed.instance_id && shouldNotifyRaid) {
             createPopup({ title: "Raid clear result", subtext: `API Time: <strong>${res.latest_activity_completed.activity_duration}</strong>` });
         }
 
