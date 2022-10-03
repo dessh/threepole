@@ -64,8 +64,8 @@ svg {
     background-image: linear-gradient(90deg, var(--primary-background), var(--secondary-background));
     padding: 8px 16px;
     margin-bottom: 16px;
-    transition: opacity 0.4s ease;
-    animation: fade-in 0.4s ease;
+    transition: opacity 0.4s;
+    animation: fade-in 0.4s;
 }
 
 .popup.fade-out {

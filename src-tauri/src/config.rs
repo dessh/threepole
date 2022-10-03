@@ -8,26 +8,26 @@ use anyhow::{anyhow, Result};
 use directories::BaseDirs;
 use serde::{de::DeserializeOwned, Serialize};
 
-use self::{prefs::Prefs, profiles::Profiles};
+use self::{prefs::Preferences, profiles::Profiles};
 use crate::consts::APP_NAME;
 
 pub mod prefs;
 pub mod profiles;
 
 pub struct ConfigManager {
-    prefs: Prefs,
+    prefs: Preferences,
     profiles: Profiles,
 }
 
 impl ConfigManager {
     pub fn load() -> Result<Self> {
         Ok(Self {
-            prefs: Prefs::load()?,
+            prefs: Preferences::load()?,
             profiles: Profiles::load()?,
         })
     }
 
-    pub fn get_prefs(&self) -> &Prefs {
+    pub fn get_prefs(&self) -> &Preferences {
         &self.prefs
     }
 
@@ -35,7 +35,7 @@ impl ConfigManager {
         &self.profiles
     }
 
-    pub fn set_prefs(&mut self, prefs: Prefs) -> Result<()> {
+    pub fn set_preferences(&mut self, prefs: Preferences) -> Result<()> {
         self.prefs = prefs;
         self.prefs.write()
     }

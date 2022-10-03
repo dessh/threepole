@@ -21,8 +21,9 @@ export default defineConfig({
         sourcemap: !!process.env.TAURI_DEBUG,
         rollupOptions: {
             input: {
-                overlay: "overlay.html",
-                profile: "profile.html"
+                overlay: "./src/overlay.html",
+                profile: "./src/profile.html",
+                preferences: "./src/preferences.html"
             }
         }
     },

@@ -18,7 +18,7 @@ use api::{
     BungieRequest, BungieResponseError,
 };
 use chrono::{DateTime, Utc};
-use config::{prefs::Prefs, profiles::Profiles, ConfigManager};
+use config::{prefs::Preferences, profiles::Profiles, ConfigManager};
 use consts::{APP_NAME, POLL_INTERVAL, RAID_ACTIVITY_TYPE};
 use poller::poll_focus;
 use serde::Serialize;
@@ -90,23 +90,24 @@ async fn search_profile(
 }
 
 #[tauri::command]
-async fn get_prefs(container: State<'_, ConfigContainer>) -> Result<Prefs, ()> {
+async fn get_preferences(container: State<'_, ConfigContainer>) -> Result<Preferences, ()> {
     Ok(container.0.lock().await.get_prefs().clone())
 }
 
 #[tauri::command]
-async fn set_prefs(
+async fn set_preferences(
     app: AppHandle,
-    prefs: Prefs,
+    preferences: Preferences,
     container: State<'_, ConfigContainer>,
 ) -> Result<(), ()> {
-    let prefs_clone = prefs.clone();
+    let preferences_clone = preferences.clone();
 
     let mut lock = container.0.lock().await;
-    lock.set_prefs(prefs).unwrap();
+    lock.set_preferences(preferences).unwrap();
 
     if let Some(o) = app.get_window("overlay") {
-        o.emit("update_prefs", prefs_clone.clone()).unwrap();
+        o.emit("update_preferences", preferences_clone.clone())
+            .unwrap();
     }
 
     Ok(())
@@ -291,33 +292,23 @@ async fn get_history(
     })
 }
 
-fn create_profile_window(handle: &AppHandle) -> Result<(), tauri::Error> {
-    WindowBuilder::new(handle, "profile", WindowUrl::App("profile.html".into()))
-        .title(APP_NAME)
-        .transparent(true)
-        .decorations(false)
-        .inner_size(400.0, 500.0)
-        .resizable(false)
-        .always_on_top(true)
-        .visible(false)
-        .build()?;
-
-    Ok(())
-}
-
 fn create_overlay(handle: &AppHandle) -> Result<(), tauri::Error> {
-    let overlay = WindowBuilder::new(handle, "overlay", WindowUrl::App("overlay.html".into()))
-        .title(APP_NAME)
-        .transparent(true)
-        .decorations(false)
-        .inner_size(400.0, 500.0)
-        .resizable(false)
-        .always_on_top(true)
-        .inner_size(0.0, 0.0)
-        .position(0.0, 0.0)
-        .visible(false)
-        .skip_taskbar(true)
-        .build()?;
+    let overlay = WindowBuilder::new(
+        handle,
+        "overlay",
+        WindowUrl::App("./src/overlay.html".into()),
+    )
+    .title(APP_NAME)
+    .transparent(true)
+    .decorations(false)
+    .inner_size(400.0, 500.0)
+    .resizable(false)
+    .always_on_top(true)
+    .inner_size(0.0, 0.0)
+    .position(0.0, 0.0)
+    .visible(false)
+    .skip_taskbar(true)
+    .build()?;
 
     overlay.set_ignore_cursor_events(true).unwrap();
 
@@ -337,11 +328,48 @@ fn create_overlay(handle: &AppHandle) -> Result<(), tauri::Error> {
     Ok(())
 }
 
+fn create_profile_window(handle: &AppHandle) -> Result<(), tauri::Error> {
+    WindowBuilder::new(
+        handle,
+        "profile",
+        WindowUrl::App("./src/profile.html".into()),
+    )
+    .title(APP_NAME)
+    .transparent(true)
+    .decorations(false)
+    .inner_size(400.0, 500.0)
+    .resizable(false)
+    .always_on_top(true)
+    .visible(false)
+    .build()?;
+
+    Ok(())
+}
+
+fn create_preferences_window(handle: &AppHandle) -> Result<(), tauri::Error> {
+    WindowBuilder::new(
+        handle,
+        "preferences",
+        WindowUrl::App("./src/preferences.html".into()),
+    )
+    .title(APP_NAME)
+    .transparent(true)
+    .decorations(false)
+    .inner_size(400.0, 500.0)
+    .resizable(false)
+    .always_on_top(true)
+    .visible(false)
+    .build()?;
+
+    Ok(())
+}
+
 fn main() -> anyhow::Result<()> {
     tauri::Builder::new()
         .system_tray(
             SystemTray::new().with_menu(
                 SystemTrayMenu::new()
+                    .add_item(CustomMenuItem::new("preferences", "Preferences"))
                     .add_item(CustomMenuItem::new("set_profile", "Set profile"))
                     .add_native_item(SystemTrayMenuItem::Separator)
                     .add_item(CustomMenuItem::new("exit", "Exit")),
@@ -356,6 +384,11 @@ fn main() -> anyhow::Result<()> {
                         None => create_profile_window(app),
                     }
                     .unwrap(),
+                    "preferences" => match app.get_window("preferences") {
+                        Some(w) => w.set_focus(),
+                        None => create_preferences_window(app),
+                    }
+                    .unwrap(),
                     _ => (),
                 }
             }
@@ -364,8 +397,8 @@ fn main() -> anyhow::Result<()> {
         .manage(ActivityTypes::default())
         .manage(CharacterIds::default())
         .invoke_handler(tauri::generate_handler![
-            get_prefs,
-            set_prefs,
+            get_preferences,
+            set_preferences,
             get_profiles,
             set_profiles,
             search_profile,

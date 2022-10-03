@@ -5,12 +5,12 @@ use super::ConfigFile;
 #[derive(Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 #[serde(default)]
-pub struct Prefs {
+pub struct Preferences {
     pub display_daily_clears: bool,
     pub display_clear_notifications: bool,
 }
 
-impl Default for Prefs {
+impl Default for Preferences {
     fn default() -> Self {
         Self {
             display_daily_clears: true,
@@ -19,7 +19,7 @@ impl Default for Prefs {
     }
 }
 
-impl ConfigFile for Prefs {
+impl ConfigFile for Preferences {
     fn get_filename() -> &'static str {
         "preferences.json"
     }
