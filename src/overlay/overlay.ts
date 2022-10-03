@@ -46,8 +46,6 @@ function init() {
 }
 
 function applyPreferences(p: any) {
-    console.log(p);
-
     if (p.displayDailyClears) {
         counterElem.classList.remove("hidden");
     } else {
@@ -58,8 +56,6 @@ function applyPreferences(p: any) {
 }
 
 async function forceRefresh(p: any) {
-    console.log(p);
-
     currentActivity = null;
     latestActivityCompleted = null;
 
