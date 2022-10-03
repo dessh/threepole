@@ -40,21 +40,26 @@
             {#if error}
                 <p class="error">{error}</p>
             {/if}
-            <div class="preference">
-                <StyledCheckbox bind:checked={preferences.displayDailyClears}
-                    >Display daily clears</StyledCheckbox
-                >
-            </div>
-            <div class="preference">
-                <StyledCheckbox
-                    bind:checked={preferences.displayClearNotifications}
-                    >Display raid clear notifications</StyledCheckbox
-                >
-            </div>
-            <div class="preference">
-                <StyledCheckbox bind:checked={preferences.displayMilliseconds}
-                    >Display timer milliseconds</StyledCheckbox
-                >
+            <p class="subheader">Overlay</p>
+            <div class="preference-group">
+                <div class="preference">
+                    <StyledCheckbox
+                        bind:checked={preferences.displayDailyClears}
+                        >Display daily clears</StyledCheckbox
+                    >
+                </div>
+                <div class="preference">
+                    <StyledCheckbox
+                        bind:checked={preferences.displayClearNotifications}
+                        >Display raid clear notifications</StyledCheckbox
+                    >
+                </div>
+                <div class="preference">
+                    <StyledCheckbox
+                        bind:checked={preferences.displayMilliseconds}
+                        >Display timer milliseconds</StyledCheckbox
+                    >
+                </div>
             </div>
             <div class="actions">
                 <button class="confirm" on:click={confirm}>Confirm</button>
@@ -64,14 +69,27 @@
 </Window>
 
 <style>
-    h1,
-    .preferences {
+    h1 {
         margin: 24px 48px;
+        margin-bottom: 0;
+    }
+
+    .preferences {
+        margin: 16px 48px;
+    }
+
+    .subheader {
+        font-size: 20px;
+        margin-bottom: 8px;
+    }
+
+    .preference-group {
+        padding: 8px 12px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
     }
 
     .preference {
-        margin-top: 16px;
-        margin-left: 12px;
+        margin: 8px;
     }
 
     .error {
@@ -97,7 +115,6 @@
 
     button:hover {
         color: #fff;
-
         box-shadow: 0 -4px 0 var(--primary-highlight) inset;
     }
 </style>
