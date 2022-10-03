@@ -49,7 +49,11 @@ impl ConfigManager {
 trait ConfigFile: Serialize + DeserializeOwned + Default {
     fn load() -> Result<Self> {
         match read_to_string(Self::get_path()?) {
-            Ok(s) => Ok(serde_json::from_str::<Self>(&s)?),
+            Ok(s) => {
+                let def = serde_json::from_str::<Self>(&s)?;
+                def.write()?;
+                Ok(def)
+            }
             Err(e) => match e.kind() {
                 ErrorKind::NotFound => {
                     let def = Self::default();
