@@ -10,7 +10,6 @@ pub struct DestinyMembership {
     membership_id: String,
     bungie_global_display_name: String,
     bungie_global_display_name_code: usize,
-    icon_path: String,
 }
 
 #[derive(Debug)]

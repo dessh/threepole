@@ -1,20 +1,19 @@
 <script lang="ts">
-    import consts from "../consts";
     import { invoke } from "@tauri-apps/api/tauri";
     import { appWindow } from "@tauri-apps/api/window";
+    import { prevent_default } from "svelte/internal";
     import Window from "../svelte/Window.svelte";
     import Loader from "./Loader.svelte";
 
-    type Profile = {
+    type BungieProfile = {
         membershipType: number;
         membershipId: string;
         bungieGlobalDisplayName: string;
         bungieGlobalDisplayNameCode: number;
-        iconPath: string;
     };
 
     type ProfileResults = {
-        profiles: Profile[];
+        profiles: BungieProfile[];
         wasSearch: boolean;
     };
 
@@ -23,14 +22,13 @@
         sub: "Enter your Bungie ID below.",
     };
 
-    let selectedProfile: Profile;
+    let selectedProfile: BungieProfile;
     let input = "";
     let placeholder = { hidden: "", shown: "Profile#0000" };
-    let state: ProfileResults = {
-        profiles: [],
-        wasSearch: false,
-    }; // TODO: null, and update on load
-    let error: string = null;
+    let state: ProfileResults;
+    let error: string;
+    let savedProfiles: any[];
+    let initialLoad = false;
 
     let searchButton: HTMLButtonElement;
 
@@ -39,17 +37,75 @@
     async function init() {
         let p: any = await invoke("get_profiles");
 
-        let selectedProfile = p.selectedProfile;
+        savedProfiles = p.savedProfiles;
 
-        if (selectedProfile) {
+        let results: ProfileResults = {
+            profiles: [],
+            wasSearch: false,
+        };
+
+        let selectedBungieProfile: BungieProfile;
+
+        for (let profile of p.savedProfiles) {
             let displayProfile: any = await invoke("get_display_profile", {
-                profile: selectedProfile,
+                profile,
             });
+
+            let bungieProfile = {
+                membershipType: profile.accountPlatform,
+                membershipId: profile.accountId,
+                bungieGlobalDisplayName: displayProfile.displayName,
+                bungieGlobalDisplayNameCode: displayProfile.displayTag,
+            };
+
+            results.profiles.push(bungieProfile);
+
+            if (
+                p.selectedProfile.accountId == profile.accountId &&
+                p.selectedProfile.accountPlatform == profile.accountPlatform
+            ) {
+                selectedBungieProfile = bungieProfile;
+            }
+        }
+
+        if (selectedBungieProfile) {
+            selectedProfile = selectedBungieProfile;
 
             headerText.main = "Welcome back";
             headerText.sub = "Want to switch accounts?";
-            input = `${displayProfile.displayName}#${displayProfile.displayTag}`;
         }
+
+        state = results;
+
+        initialLoad = true;
+    }
+
+    function getIconPath(membershipType: number): string {
+        let name = "default";
+
+        switch (membershipType) {
+            case 3:
+                name = "steam";
+                break;
+            case 4:
+                name = "blizzard";
+                break;
+            case 6:
+                name = "epic";
+                break;
+        }
+
+        return `/platforms/${name}.svg`;
+    }
+
+    function deleteSavedProfile(profile: BungieProfile) {
+        savedProfiles = savedProfiles.filter(
+            (p) =>
+                p.accountPlatform != profile.membershipType ||
+                p.accountId != profile.membershipId
+        );
+
+        state.profiles = state.profiles.filter((p) => p != profile);
     }
 
     function inputKeyDown(e: KeyboardEvent) {
@@ -73,7 +129,10 @@
             displayName: args[0],
             displayNameCode: parseInt(args[1]),
         })
-            .then((p: Profile[]) => (state = { profiles: p, wasSearch: true }))
+            .then(
+                (p: BungieProfile[]) =>
+                    (state = { profiles: p, wasSearch: true })
+            )
             .catch((e) => (error = e.message ?? e));
     }
 
@@ -96,8 +155,14 @@
     }
 
     function confirm() {
+        savedProfiles.push({
+            accountPlatform: selectedProfile.membershipType,
+            accountId: selectedProfile.membershipId,
+        });
+
         invoke("set_profiles", {
             profiles: {
+                savedProfiles,
                 selectedProfile: {
                     accountPlatform: selectedProfile.membershipType,
                     accountId: selectedProfile.membershipId,
@@ -117,11 +182,11 @@
 </script>
 
 <Window>
-    <div class="header">
+    <div class="header {initialLoad ? '' : 'invisible'}">
         <h1>{headerText.main}</h1>
         <p>{headerText.sub}</p>
     </div>
-    <div class="search">
+    <div class="search {initialLoad ? '' : 'invisible'}">
         <p class="placeholder">
             <span class="invisible">{placeholder.hidden}</span><span
                 >{placeholder.shown}</span
@@ -161,16 +226,43 @@
                     class="profile {selectedProfile == profile
                         ? 'selected'
                         : ''}"
-                    on:click={() => (selectedProfile = profile)}
+                    on:click={(e) => {
+                        let target = e.target;
+                        if (
+                            target instanceof Element &&
+                            target.classList.contains("delete-button-component")
+                        ) {
+                            e.preventDefault();
+                            return;
+                        }
+
+                        selectedProfile = profile;
+                    }}
                 >
                     <div
                         class="platform-icon"
-                        style="background-image: url('{consts.resourceBasePath +
-                            profile.iconPath}')"
+                        style="background-image: url('{getIconPath(
+                            profile.membershipType
+                        )}')"
                     />
                     <span
                         >{profile.bungieGlobalDisplayName}#{profile.bungieGlobalDisplayNameCode}</span
                     >
+                    {#if !state.wasSearch}
+                        <button
+                            class="delete-button-component"
+                            on:click={() => deleteSavedProfile(profile)}
+                            ><svg
+                                class="delete-button-component"
+                                xmlns="http://www.w3.org/2000/svg"
+                            >
+                                <path
+                                    class="delete-button-component"
+                                    d="M6.062 15 5 13.938 8.938 10 5 6.062 6.062 5 10 8.938 13.938 5 15 6.062 11.062 10 15 13.938 13.938 15 10 11.062Z"
+                                />
+                            </svg></button
+                        >
+                    {/if}
                 </div>
             {/each}
             {#if state.profiles.length > 0}
@@ -186,8 +278,6 @@
             <Loader />
         </div>
     {/if}
-
-    <div class="profiles-list" />
 </Window>
 
 <style>
@@ -303,6 +393,7 @@
 
     .results .profile {
         padding: 16px;
+        padding-right: 12px;
         text-align: left;
         border: 1px solid;
         border-image-source: linear-gradient(
@@ -337,6 +428,28 @@
     .profile span {
         font-size: 16px;
         vertical-align: middle;
+    }
+
+    .profile button {
+        vertical-align: middle;
+        width: 24px;
+        height: 24px;
+        float: right;
+        padding: 2px;
+        transition: background-color 0.1s;
+    }
+
+    .profile button:hover {
+        background-color: rgba(0, 0, 0, 0.25);
+    }
+
+    .profile button svg {
+        fill: #aaa;
+        transition: fill 0.1s;
+    }
+
+    .profile button:hover svg {
+        fill: #fff;
     }
 
     .results .confirm-wrapper {

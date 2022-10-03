@@ -62,7 +62,6 @@ struct ActivityHistory {
 pub struct DisplayProfile {
     pub display_name: String,
     pub display_tag: usize,
-    pub profile: Profile,
     pub characters: Vec<String>,
 }
 
@@ -84,20 +83,15 @@ impl DisplayProfile {
 
         let res: ProfileInfo = serde_json::from_value(res_val)?;
 
-        let profile_clone = profile.clone();
-
         let dp = Self {
             display_name: res.display_name,
             display_tag: res.display_tag,
-            profile: profile_clone,
             characters: res.character_ids,
         };
 
-        let dp_clone = dp.clone();
+        cache.insert(profile, dp.clone());
 
-        cache.insert(profile, dp);
-
-        Ok(dp_clone)
+        Ok(dp)
     }
 }
 
@@ -148,14 +142,11 @@ async fn set_preferences(
     preferences: Preferences,
     container: State<'_, ConfigContainer>,
 ) -> Result<(), ()> {
-    let preferences_clone = preferences.clone();
-
     let mut lock = container.0.lock().await;
-    lock.set_preferences(preferences).unwrap();
+    lock.set_preferences(preferences.clone()).unwrap();
 
     if let Some(o) = app.get_window("overlay") {
-        o.emit("update_preferences", preferences_clone.clone())
-            .unwrap();
+        o.emit("update_preferences", preferences).unwrap();
     }
 
     Ok(())
