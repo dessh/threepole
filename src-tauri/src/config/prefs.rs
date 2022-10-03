@@ -8,6 +8,7 @@ use super::ConfigFile;
 pub struct Preferences {
     pub display_daily_clears: bool,
     pub display_clear_notifications: bool,
+    pub display_milliseconds: bool,
 }
 
 impl Default for Preferences {
@@ -15,6 +16,7 @@ impl Default for Preferences {
         Self {
             display_daily_clears: true,
             display_clear_notifications: true,
+            display_milliseconds: true,
         }
     }
 }

@@ -7,6 +7,7 @@
     type Preferences = {
         displayDailyClears: boolean;
         displayClearNotifications: boolean;
+        displayMilliseconds: boolean;
     };
 
     let preferences: Preferences;
@@ -48,6 +49,11 @@
                 <StyledCheckbox
                     bind:checked={preferences.displayClearNotifications}
                     >Display raid clear notifications</StyledCheckbox
+                >
+            </div>
+            <div class="preference">
+                <StyledCheckbox bind:checked={preferences.displayMilliseconds}
+                    >Display timer milliseconds</StyledCheckbox
                 >
             </div>
             <div class="actions">

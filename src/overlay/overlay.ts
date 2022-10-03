@@ -6,7 +6,7 @@ import createPopup from "./popups";
 
 const loaderElem = document.querySelector<HTMLElement>("#loader")!;
 const widgetElem = document.querySelector<HTMLElement>("#widget")!;
-const stopwatchElem = document.querySelector<HTMLElement>("#stopwatch")!;
+const timerElem = document.querySelector<HTMLElement>("#timer")!;
 const timeElem = document.querySelector<HTMLElement>("#time")!;
 const msElem = document.querySelector<HTMLElement>("#ms")!;
 const counterElem = document.querySelector<HTMLElement>("#counter")!;
@@ -23,10 +23,15 @@ let latestActivityCompleted: {
 } | null;
 
 let shown = false;
-let shouldNotifyRaid = true;
+let prefs: any;
+let timerInterval;
 
-function init() {
+async function init() {
     appWindow.listen("show", () => {
+        if (!timerInterval) {
+            timerInterval = setInterval(timerTick, 1000 / 30);
+        }
+
         appWindow.show();
         shown = true;
     });
@@ -34,25 +39,37 @@ function init() {
     appWindow.listen("hide", () => {
         appWindow.hide();
         shown = false;
+
+        if (timerInterval) {
+            clearTimeout(timerInterval);
+            timerInterval = null;
+        }
     });
 
     appWindow.listen("update_profiles", (p) => forceRefresh(p.payload));
     appWindow.listen("update_preferences", (p) => applyPreferences(p.payload));
 
-    setInterval(stopwatchTick, 1 / 60);
+    let prefs: any = await invoke("get_preferences");
+    applyPreferences(prefs);
 
-    invoke("get_profiles").then((p) => forceRefresh(p));
-    invoke("get_preferences").then((p) => applyPreferences(p));
+    let profiles: any = await invoke("get_profiles");
+    forceRefresh(profiles);
 }
 
 function applyPreferences(p: any) {
+    prefs = p;
+
     if (p.displayDailyClears) {
         counterElem.classList.remove("hidden");
     } else {
         counterElem.classList.add("hidden");
     }
 
-    shouldNotifyRaid = p.displayClearNotifications;
+    if (p.displayMilliseconds) {
+        msElem.classList.remove("hidden");
+    } else {
+        msElem.classList.add("hidden");
+    }
 }
 
 async function forceRefresh(p: any) {
@@ -101,9 +118,9 @@ async function refreshActivity(force: boolean) {
     }
 
     if (currentActivity?.isRaid) {
-        stopwatchElem.classList.remove("hidden");
+        timerElem.classList.remove("hidden");
     } else {
-        stopwatchElem.classList.add("hidden");
+        timerElem.classList.add("hidden");
     }
 }
 
@@ -116,7 +133,7 @@ async function refreshHistory(force: boolean) {
 
     let newTime = new Date(res.latest_activity_completed?.period);
     if (!latestActivityCompleted || newTime > latestActivityCompleted?.period) { // In case Bungie API returns an old activity history list
-        if (latestActivityCompleted && res.latest_activity_completed && latestActivityCompleted.instanceId != res.latest_activity_completed.instance_id && shouldNotifyRaid) {
+        if (latestActivityCompleted && res.latest_activity_completed && latestActivityCompleted.instanceId != res.latest_activity_completed.instance_id && prefs?.displayClearNotifications) {
             createPopup({ title: "Raid clear result", subtext: `API Time: <strong>${res.latest_activity_completed.activity_duration}</strong>` });
         }
 
@@ -129,7 +146,7 @@ async function refreshHistory(force: boolean) {
     }
 }
 
-function stopwatchTick() {
+function timerTick() {
     if (!shown || !currentActivity) {
         return;
     }
