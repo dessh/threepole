@@ -3,6 +3,7 @@
     import { appWindow } from "@tauri-apps/api/window";
     import Window from "../svelte/Window.svelte";
     import Loader from "./Loader.svelte";
+    import iconPaths from "./platforms/platforms";
 
     type BungieProfile = {
         membershipType: number;
@@ -77,24 +78,6 @@
         state = results;
 
         initialLoad = true;
-    }
-
-    function getIconPath(membershipType: number): string {
-        let name = "default";
-
-        switch (membershipType) {
-            case 3:
-                name = "steam";
-                break;
-            case 4:
-                name = "blizzard";
-                break;
-            case 6:
-                name = "epic";
-                break;
-        }
-
-        return `/platforms/${name}.svg`;
     }
 
     function deleteSavedProfile(profile: BungieProfile) {
@@ -240,9 +223,9 @@
                 >
                     <div
                         class="platform-icon"
-                        style="background-image: url('{getIconPath(
+                        style="background-image: url('{iconPaths[
                             profile.membershipType
-                        )}')"
+                        ]}')"
                     />
                     <span
                         >{profile.bungieGlobalDisplayName}#{profile.bungieGlobalDisplayNameCode}</span
@@ -422,6 +405,8 @@
         vertical-align: middle;
         margin-right: 8px;
         background-size: contain;
+        background-repeat: no-repeat;
+        background-position: center;
     }
 
     .profile span {
