@@ -116,8 +116,8 @@
 
 <Window>
     <div class="header">
-        <h1 id="main-header">{headerText.main}</h1>
-        <p id="sub-header">{headerText.sub}</p>
+        <h1>{headerText.main}</h1>
+        <p>{headerText.sub}</p>
     </div>
     <div class="search">
         <p class="placeholder">
@@ -286,9 +286,6 @@
         width: 60vw;
         margin: 0 auto;
         margin-top: 8px;
-        /* for confirm button */
-        padding-bottom: calc(36px + 36px);
-        position: relative;
     }
 
     .results p {
@@ -341,9 +338,7 @@
     }
 
     .results .confirm-wrapper {
-        position: absolute;
-        width: 100%;
-        bottom: 24px;
+        margin: 16px 0;
         text-align: right;
     }
 
