@@ -20,7 +20,7 @@
                 "./icons/icon.ico"
             ],
             "identifier": "sh.des.threepole",
-            "shortDescription": "",
+            "shortDescription": " A minimal raid overlay for Destiny 2",
             "targets": [
                 "msi",
                 "updater"
@@ -38,7 +38,12 @@
             "iconPath": "./icons/icon.ico"
         },
         "updater": {
-            "active": false
+            "active": true,
+            "endpoints": [
+                "https://gist.githubusercontent.com/dessh/db900ce1c2499096ddc4053707183c3d/raw"
+            ],
+            "dialog": true,
+            "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEYyRkNGNDMwMUI0OUFDQ0IKUldUTHJFa2JNUFQ4OG5ib1hPdnNEcDdzbXJhWmRtWVFxenRFU0ZYOTc0V1RXbS9FU0dhWW9HZDMK"
         }
     }
 }
