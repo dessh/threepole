@@ -1,3 +1,6 @@
+use std::collections::HashSet;
+use std::hash::Hash;
+
 use serde::{Deserialize, Serialize};
 
 use super::ConfigFile;
@@ -6,17 +9,15 @@ use super::ConfigFile;
 #[serde(rename_all = "camelCase")]
 #[serde(default)]
 pub struct Profiles {
-    pub saved_profiles: Vec<Profile>,
+    pub saved_profiles: HashSet<Profile>,
     pub selected_profile: Option<Profile>,
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, PartialEq, Eq, Hash)]
 #[serde(rename_all = "camelCase")]
 pub struct Profile {
     pub account_platform: usize,
     pub account_id: String,
-    pub display_name: String,
-    pub display_tag: usize,
 }
 
 impl ConfigFile for Profiles {

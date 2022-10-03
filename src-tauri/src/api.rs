@@ -19,6 +19,7 @@ pub enum BungieRequest<'a> {
     GetProfile {
         membership_type: usize,
         membership_id: &'a str,
+        component: usize,
     },
     GetActivityHistory {
         membership_type: usize,
@@ -93,8 +94,8 @@ pub async fn make_request(req: BungieRequest<'_>) -> Result<Value, BungieRespons
             "/Destiny2/SearchDestinyPlayerByBungieName/All",
             Method::POST,
         ).body(json!({"displayName": display_name, "displayNameCode": display_name_code}).to_string()),
-        BungieRequest::GetProfile { membership_type, membership_id } =>  {
-            api_request(&format!("/Destiny2/{membership_type}/Profile/{membership_id}?components=204"), Method::GET)
+        BungieRequest::GetProfile { membership_type, membership_id, component } =>  {
+            api_request(&format!("/Destiny2/{membership_type}/Profile/{membership_id}?components={component}"), Method::GET)
         }
         BungieRequest::GetActivityHistory { membership_type, membership_id, character_id, page } =>  {
             api_request(&format!("/Destiny2/{membership_type}/Account/{membership_id}/Character/{character_id}/Stats/Activities?mode=4&count=20&page={page}"), Method::GET)

@@ -22,7 +22,7 @@
         })
             .then(() => appWindow.close())
             .catch((e) => {
-                error = e;
+                error = e.message ?? e;
                 appWindow.show();
             });
 

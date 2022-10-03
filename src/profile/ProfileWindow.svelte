@@ -36,16 +36,20 @@
 
     $: updatePlaceholder(input);
 
-    function init() {
-        invoke("get_profiles").then((p: any) => {
-            let selectedProfile = p.selectedProfile;
+    async function init() {
+        let p: any = await invoke("get_profiles");
 
-            if (selectedProfile) {
-                headerText.main = "Welcome back";
-                headerText.sub = "Want to switch accounts?";
-                input = `${selectedProfile.displayName}#${selectedProfile.displayTag}`;
-            }
-        });
+        let selectedProfile = p.selectedProfile;
+
+        if (selectedProfile) {
+            let displayProfile: any = await invoke("get_display_profile", {
+                profile: selectedProfile,
+            });
+
+            headerText.main = "Welcome back";
+            headerText.sub = "Want to switch accounts?";
+            input = `${displayProfile.displayName}#${displayProfile.displayTag}`;
+        }
     }
 
     function inputKeyDown(e: KeyboardEvent) {
@@ -70,7 +74,7 @@
             displayNameCode: parseInt(args[1]),
         })
             .then((p: Profile[]) => (state = { profiles: p, wasSearch: true }))
-            .catch((e) => (error = e));
+            .catch((e) => (error = e.message ?? e));
     }
 
     function updatePlaceholder(newValue) {
@@ -97,14 +101,12 @@
                 selectedProfile: {
                     accountPlatform: selectedProfile.membershipType,
                     accountId: selectedProfile.membershipId,
-                    displayName: selectedProfile.bungieGlobalDisplayName,
-                    displayTag: selectedProfile.bungieGlobalDisplayNameCode,
                 },
             },
         })
             .then(() => appWindow.close())
             .catch((e) => {
-                error = e;
+                error = e.message ?? e;
                 appWindow.show();
             });
 

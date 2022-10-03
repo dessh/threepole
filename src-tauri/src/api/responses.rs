@@ -14,7 +14,61 @@ pub struct DestinyMembership {
 }
 
 #[derive(Debug)]
-pub struct CharacterCurrentActivities {
+pub struct ProfileInfo {
+    pub privacy: usize,
+    pub display_name: String,
+    pub display_tag: usize,
+    pub character_ids: Vec<String>,
+}
+
+impl<'de> Deserialize<'de> for ProfileInfo {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        #[derive(Deserialize)]
+        #[serde(rename_all = "camelCase")]
+        struct _Profile {
+            profile: _ProfileInfo,
+        }
+
+        #[derive(Deserialize)]
+        #[serde(rename_all = "camelCase")]
+        struct _ProfileInfo {
+            data: _ProfileData,
+            privacy: usize,
+        }
+
+        #[derive(Deserialize)]
+        #[serde(rename_all = "camelCase")]
+        struct _ProfileData {
+            user_info: _UserInfo,
+            character_ids: Vec<String>,
+        }
+
+        #[derive(Deserialize)]
+        #[serde(rename_all = "camelCase")]
+        struct _UserInfo {
+            bungie_global_display_name: String,
+            bungie_global_display_name_code: usize,
+        }
+
+        let profile = _Profile::deserialize(deserializer)?;
+        Ok(Self {
+            privacy: profile.profile.privacy,
+            display_name: profile.profile.data.user_info.bungie_global_display_name,
+            display_tag: profile
+                .profile
+                .data
+                .user_info
+                .bungie_global_display_name_code,
+            character_ids: profile.profile.data.character_ids,
+        })
+    }
+}
+
+#[derive(Debug)]
+pub struct ProfileCurrentActivities {
     pub privacy: usize,
     pub activities: Option<Vec<CharacterCurrentActivity>>,
 }
@@ -39,32 +93,32 @@ impl Ord for CharacterCurrentActivity {
     }
 }
 
-impl<'de> Deserialize<'de> for CharacterCurrentActivities {
+impl<'de> Deserialize<'de> for ProfileCurrentActivities {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
     {
         #[derive(Deserialize)]
         #[serde(rename_all = "camelCase")]
-        struct Profile {
-            character_activities: CurrentActivities,
+        struct _Profile {
+            character_activities: _CurrentActivities,
         }
 
         #[derive(Deserialize)]
         #[serde(rename_all = "camelCase")]
-        struct CurrentActivities {
-            data: Option<HashMap<String, CurrentActivity>>,
+        struct _CurrentActivities {
+            data: Option<HashMap<String, _CurrentActivity>>,
             privacy: usize,
         }
 
         #[derive(Deserialize)]
         #[serde(rename_all = "camelCase")]
-        struct CurrentActivity {
+        struct _CurrentActivity {
             date_activity_started: DateTime<Utc>,
             current_activity_hash: usize,
         }
 
-        let profile = Profile::deserialize(deserializer)?;
+        let profile = _Profile::deserialize(deserializer)?;
         Ok(Self {
             privacy: profile.character_activities.privacy,
             activities: profile.character_activities.data.map(|d| {
@@ -113,40 +167,40 @@ impl<'de> Deserialize<'de> for CompletedActivity {
     {
         #[derive(Deserialize)]
         #[serde(rename_all = "camelCase")]
-        struct Activity {
+        struct _Activity {
             period: DateTime<Utc>,
-            activity_details: ActivityDetails,
-            values: Values,
+            activity_details: _ActivityDetails,
+            values: _Values,
         }
 
         #[derive(Deserialize)]
         #[serde(rename_all = "camelCase")]
-        struct ActivityDetails {
+        struct _ActivityDetails {
             instance_id: String,
         }
 
         #[derive(Deserialize)]
         #[serde(rename_all = "camelCase")]
-        struct Values {
-            completion_reason: Value,
-            completed: Value,
-            activity_duration_seconds: Value,
+        struct _Values {
+            completion_reason: _Value,
+            completed: _Value,
+            activity_duration_seconds: _Value,
         }
 
         #[derive(Deserialize)]
         #[serde(rename_all = "camelCase")]
-        struct Value {
-            basic: BasicValue,
+        struct _Value {
+            basic: _BasicValue,
         }
 
         #[derive(Deserialize)]
         #[serde(rename_all = "camelCase")]
-        struct BasicValue {
+        struct _BasicValue {
             value: f32,
             display_value: String,
         }
 
-        let activity = Activity::deserialize(deserializer)?;
+        let activity = _Activity::deserialize(deserializer)?;
         Ok(Self {
             period: activity.period,
             instance_id: activity.activity_details.instance_id,

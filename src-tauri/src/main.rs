@@ -12,13 +12,17 @@ use anyhow::{anyhow, Error};
 use api::{
     make_request,
     responses::{
-        CharacterActivityHistory, CharacterCurrentActivities, CompletedActivity,
-        DestinyActivityDefinition, DestinyMembership,
+        CharacterActivityHistory, CompletedActivity, DestinyActivityDefinition, DestinyMembership,
+        ProfileCurrentActivities, ProfileInfo,
     },
     BungieRequest, BungieResponseError,
 };
 use chrono::{DateTime, Utc};
-use config::{prefs::Preferences, profiles::Profiles, ConfigManager};
+use config::{
+    prefs::Preferences,
+    profiles::{Profile, Profiles},
+    ConfigManager,
+};
 use consts::{APP_NAME, POLL_INTERVAL, RAID_ACTIVITY_TYPE};
 use poller::poll_focus;
 use serde::Serialize;
@@ -36,10 +40,10 @@ mod poller;
 struct ConfigContainer(Mutex<ConfigManager>);
 
 #[derive(Default)]
-struct ActivityTypes(Mutex<HashMap<usize, usize>>);
+struct ActivityTypeCache(Mutex<HashMap<usize, usize>>);
 
 #[derive(Default)]
-struct CharacterIds(Mutex<Vec<String>>);
+struct DisplayProfileCache(Mutex<HashMap<Profile, DisplayProfile>>);
 
 #[derive(Serialize)]
 struct CurrentActivity {
@@ -51,6 +55,50 @@ struct CurrentActivity {
 struct ActivityHistory {
     total_today: usize,
     latest_activity_completed: Option<CompletedActivity>,
+}
+
+#[derive(Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct DisplayProfile {
+    pub display_name: String,
+    pub display_tag: usize,
+    pub profile: Profile,
+    pub characters: Vec<String>,
+}
+
+impl DisplayProfile {
+    async fn get(
+        profile: Profile,
+        cache: &mut HashMap<Profile, DisplayProfile>,
+    ) -> anyhow::Result<Self> {
+        if cache.contains_key(&profile) {
+            return Ok(cache.get(&profile).unwrap().clone());
+        }
+
+        let res_val = make_request(BungieRequest::GetProfile {
+            membership_type: profile.account_platform,
+            membership_id: &profile.account_id,
+            component: 100,
+        })
+        .await?;
+
+        let res: ProfileInfo = serde_json::from_value(res_val)?;
+
+        let profile_clone = profile.clone();
+
+        let dp = Self {
+            display_name: res.display_name,
+            display_tag: res.display_tag,
+            profile: profile_clone,
+            characters: res.character_ids,
+        };
+
+        let dp_clone = dp.clone();
+
+        cache.insert(profile, dp);
+
+        Ok(dp_clone)
+    }
 }
 
 struct SerializableError(Error);
@@ -114,6 +162,18 @@ async fn set_preferences(
 }
 
 #[tauri::command]
+async fn get_display_profile(
+    profile: Profile,
+    display_profiles: State<'_, DisplayProfileCache>,
+) -> Result<DisplayProfile, SerializableError> {
+    Ok(
+        DisplayProfile::get(profile, &mut *display_profiles.0.lock().await)
+            .await
+            .map_err(|e| SerializableError(e.into()))?,
+    )
+}
+
+#[tauri::command]
 async fn get_profiles(container: State<'_, ConfigContainer>) -> Result<Profiles, ()> {
     Ok(container.0.lock().await.get_profiles().clone())
 }
@@ -141,40 +201,32 @@ async fn set_profiles(
 #[tauri::command]
 async fn get_current_activity(
     container: State<'_, ConfigContainer>,
-    characters: State<'_, CharacterIds>,
-    activity_types: State<'_, ActivityTypes>,
+    activity_types: State<'_, ActivityTypeCache>,
 ) -> Result<CurrentActivity, SerializableError> {
-    let (membership_type, membership_id) = {
+    let profile = {
         let lock = container.0.lock().await;
 
         match &lock.get_profiles().selected_profile {
-            Some(c) => (c.account_platform, c.account_id.clone()),
+            Some(p) => p.clone(),
             None => return Err(SerializableError(anyhow!("No profile set"))),
         }
     };
 
     let res = make_request(BungieRequest::GetProfile {
-        membership_type,
-        membership_id: &membership_id,
+        membership_type: profile.account_platform,
+        membership_id: &profile.account_id,
+        component: 204,
     })
     .await
     .map_err(|e| SerializableError(e.into()))?;
 
-    let current_activities: CharacterCurrentActivities =
+    let current_activities: ProfileCurrentActivities =
         serde_json::from_value(res).map_err(|e| SerializableError(e.into()))?;
 
     let activities = match current_activities.activities {
         Some(a) => a,
         None => return Err(SerializableError(anyhow!("Profile is private"))),
     };
-
-    {
-        let mut lock = characters.0.lock().await;
-        lock.clear();
-        for activity in activities.iter() {
-            lock.push(activity.character_id.clone());
-        }
-    }
 
     let latest_activity = activities
         .iter()
@@ -220,18 +272,24 @@ async fn get_current_activity(
 #[tauri::command]
 async fn get_history(
     container: State<'_, ConfigContainer>,
-    characters: State<'_, CharacterIds>,
+    display_profiles: State<'_, DisplayProfileCache>,
 ) -> Result<ActivityHistory, SerializableError> {
-    let (membership_type, membership_id) = {
+    let profile = {
         let lock = container.0.lock().await;
 
         match &lock.get_profiles().selected_profile {
-            Some(c) => (c.account_platform, c.account_id.clone()),
+            Some(p) => p.clone(),
             None => return Err(SerializableError(anyhow!("No profile set"))),
         }
     };
 
-    let characters = { characters.0.lock().await.clone() };
+    let display_profile = {
+        let mut lock = display_profiles.0.lock().await;
+
+        DisplayProfile::get(profile.clone(), &mut *lock)
+            .await
+            .map_err(|e| SerializableError(e.into()))?
+    };
 
     let mut past_activities: HashSet<CompletedActivity> = HashSet::new();
 
@@ -245,13 +303,13 @@ async fn get_history(
         time
     };
 
-    for character_id in characters {
+    for character_id in display_profile.characters.iter() {
         let mut page = 0;
 
         loop {
             let res = make_request(BungieRequest::GetActivityHistory {
-                membership_type,
-                membership_id: &membership_id,
+                membership_type: profile.account_platform,
+                membership_id: &profile.account_id,
                 character_id: &character_id,
                 page,
             })
@@ -394,13 +452,14 @@ fn main() -> anyhow::Result<()> {
             }
         })
         .manage(ConfigContainer(Mutex::new(ConfigManager::load()?)))
-        .manage(ActivityTypes::default())
-        .manage(CharacterIds::default())
+        .manage(ActivityTypeCache::default())
+        .manage(DisplayProfileCache::default())
         .invoke_handler(tauri::generate_handler![
             get_preferences,
             set_preferences,
             get_profiles,
             set_profiles,
+            get_display_profile,
             search_profile,
             get_current_activity,
             get_history,

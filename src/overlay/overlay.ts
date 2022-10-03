@@ -69,10 +69,16 @@ async function forceRefresh(p: any) {
         let selectedProfile = p.selectedProfile;
 
         if (selectedProfile) {
-            createPopup({ title: `${selectedProfile.displayName}#${selectedProfile.displayTag}`, subtext: "Threepole is active." });
+            let displayProfile: any = await invoke("get_display_profile", {
+                profile: selectedProfile,
+            });
+
+            createPopup({ title: `${displayProfile.displayName}#${displayProfile.displayTag}`, subtext: "Threepole is active." });
         }
     } catch (e: any) {
-        createPopup({ title: "Failed to fetch initial stats", subtext: e.message });
+        let message = e.message ?? e;
+
+        createPopup({ title: "Failed to fetch initial stats", subtext: message });
     }
 
     loaderElem.classList.add("hidden");
