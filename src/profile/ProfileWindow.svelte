@@ -1,7 +1,6 @@
 <script lang="ts">
     import { invoke } from "@tauri-apps/api/tauri";
     import { appWindow } from "@tauri-apps/api/window";
-    import { prevent_default } from "svelte/internal";
     import Window from "../svelte/Window.svelte";
     import Loader from "./Loader.svelte";
 
