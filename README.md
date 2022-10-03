@@ -11,6 +11,7 @@ Threepole is a clean, minimal raid overlay written in Rust and TypeScript that d
 - Displays your daily raid clear count
 - Notifications displaying the results of your last raid
 - Clean, unintrusive widget located above your minimap
+- Easy-to-access configuration via the tray icon
 - More to come!
 
 ## Installation
