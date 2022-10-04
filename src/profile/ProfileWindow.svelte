@@ -1,55 +1,65 @@
 <script lang="ts">
     import { invoke } from "@tauri-apps/api/tauri";
     import { appWindow } from "@tauri-apps/api/window";
+    import LineButton from "../svelte/LineButton.svelte";
     import Window from "../svelte/Window.svelte";
     import Loader from "./Loader.svelte";
-    import iconPaths from "./platforms/platforms";
+    import ProfileWidget from "./Profile.svelte";
+    import ProfileAddWidget from "./ProfileAdd.svelte";
+    import type {
+        BungieProfile,
+        ThreepoleProfiles,
+        ThreepoleDisplayProfile,
+        ThreepoleProfile,
+    } from "./types";
 
-    type BungieProfile = {
-        membershipType: number;
-        membershipId: string;
-        bungieGlobalDisplayName: string;
-        bungieGlobalDisplayNameCode: number;
+    type State = {
+        addPage: boolean;
+        hasSearched: boolean;
+        error: string;
+        searchResults: BungieProfile[];
+        searchSelectedProfile: BungieProfile;
     };
 
-    type ProfileResults = {
-        profiles: BungieProfile[];
-        wasSearch: boolean;
-    };
-
-    let headerText = {
-        main: "Welcome",
-        sub: "Enter your Bungie ID below.",
-    };
+    let wasNoSavedProfiles = true;
 
     let selectedProfile: BungieProfile;
+    let savedProfiles: BungieProfile[];
+
     let input = "";
     let placeholder = { hidden: "", shown: "Profile#0000" };
-    let state: ProfileResults;
-    let error: string;
-    let savedProfiles: any[];
-    let initialLoad = false;
+
+    let state: State = defaultState(false);
 
     let searchButton: HTMLButtonElement;
 
     $: updatePlaceholder(input);
 
-    async function init() {
-        let p: any = await invoke("get_profiles");
-
-        savedProfiles = p.savedProfiles;
-
-        let results: ProfileResults = {
-            profiles: [],
-            wasSearch: false,
+    function defaultState(addPage: boolean): State {
+        return {
+            addPage,
+            hasSearched: false,
+            error: null,
+            searchResults: null,
+            searchSelectedProfile: null,
         };
+    }
 
-        let selectedBungieProfile: BungieProfile;
+    async function init() {
+        let p: ThreepoleProfiles = await invoke("get_profiles");
+
+        let profiles: BungieProfile[] = [];
 
         for (let profile of p.savedProfiles) {
-            let displayProfile: any = await invoke("get_display_profile", {
-                profile,
-            });
+            let displayProfile: ThreepoleDisplayProfile;
+
+            try {
+                displayProfile = await invoke("get_display_profile", {
+                    profile,
+                });
+            } catch {
+                continue;
+            }
 
             let bungieProfile = {
                 membershipType: profile.accountPlatform,
@@ -58,36 +68,46 @@
                 bungieGlobalDisplayNameCode: displayProfile.displayTag,
             };
 
-            results.profiles.push(bungieProfile);
+            profiles.push(bungieProfile);
 
             if (
                 p.selectedProfile.accountId == profile.accountId &&
                 p.selectedProfile.accountPlatform == profile.accountPlatform
             ) {
-                selectedBungieProfile = bungieProfile;
+                selectedProfile = bungieProfile;
             }
         }
 
-        if (selectedBungieProfile) {
-            selectedProfile = selectedBungieProfile;
+        wasNoSavedProfiles = profiles.length == 0;
 
-            headerText.main = "Welcome back";
-            headerText.sub = "Want to switch accounts?";
+        savedProfiles = profiles;
+    }
+
+    function areProfilesEqual(p1: BungieProfile, p2: BungieProfile): boolean {
+        return (
+            p1?.membershipType == p2?.membershipType &&
+            p1?.membershipId == p2?.membershipId
+        );
+    }
+
+    function addSavedProfile(profile: BungieProfile) {
+        selectedProfile = profile;
+
+        if (savedProfiles.some((p) => areProfilesEqual(p, profile))) {
+            return;
         }
 
-        state = results;
-
-        initialLoad = true;
+        savedProfiles.push(profile);
     }
 
     function deleteSavedProfile(profile: BungieProfile) {
         savedProfiles = savedProfiles.filter(
-            (p) =>
-                p.accountPlatform != profile.membershipType ||
-                p.accountId != profile.membershipId
+            (p) => !areProfilesEqual(p, profile)
         );
 
-        state.profiles = state.profiles.filter((p) => p != profile);
+        if (areProfilesEqual(profile, selectedProfile)) {
+            selectedProfile = null;
+        }
     }
 
     function inputKeyDown(e: KeyboardEvent) {
@@ -96,14 +116,9 @@
         }
     }
 
-    function isProfileResults(s: any): boolean {
-        return s && s.wasSearch !== null;
-    }
-
     function search() {
-        state = null;
-        error = null;
-        selectedProfile = null;
+        state = defaultState(true);
+        state.hasSearched = true;
 
         let args = input.split("#");
 
@@ -111,11 +126,8 @@
             displayName: args[0],
             displayNameCode: parseInt(args[1]),
         })
-            .then(
-                (p: BungieProfile[]) =>
-                    (state = { profiles: p, wasSearch: true })
-            )
-            .catch((e) => (error = e.message ?? e));
+            .then((p: BungieProfile[]) => (state.searchResults = p))
+            .catch((e) => (state.error = e.message ?? e));
     }
 
     function updatePlaceholder(newValue) {
@@ -136,143 +148,158 @@
         }
     }
 
+    function convertProfile(profile: BungieProfile): ThreepoleProfile {
+        return {
+            accountPlatform: profile.membershipType,
+            accountId: profile.membershipId,
+        };
+    }
+
     function confirm() {
-        savedProfiles.push({
-            accountPlatform: selectedProfile.membershipType,
-            accountId: selectedProfile.membershipId,
-        });
+        let newSavedProfiles = savedProfiles.map((p) => convertProfile(p));
+        let newSelectedProfile = convertProfile(selectedProfile);
 
         invoke("set_profiles", {
             profiles: {
-                savedProfiles,
-                selectedProfile: {
-                    accountPlatform: selectedProfile.membershipType,
-                    accountId: selectedProfile.membershipId,
-                },
+                savedProfiles: newSavedProfiles,
+                selectedProfile: newSelectedProfile,
             },
         })
             .then(() => appWindow.close())
-            .catch((e) => {
-                error = e.message ?? e;
-                appWindow.show();
-            });
-
-        appWindow.hide();
+            .catch((e) => (state.error = e.message ?? e));
     }
 
     init();
 </script>
 
 <Window>
-    <div class="header {initialLoad ? '' : 'invisible'}">
-        <h1>{headerText.main}</h1>
-        <p>{headerText.sub}</p>
-    </div>
-    <div class="search {initialLoad ? '' : 'invisible'}">
-        <p class="placeholder">
-            <span class="invisible">{placeholder.hidden}</span><span
-                >{placeholder.shown}</span
-            >
-        </p>
-        <input
-            bind:value={input}
-            on:keydown={inputKeyDown}
-            spellcheck="false"
-            maxlength="31"
-        /><button
-            bind:this={searchButton}
-            on:click={search}
-            disabled={!state || !input.split("#")[1]}
-            ><svg xmlns="http://www.w3.org/2000/svg">
-                <path
-                    d="m19.6 21-6.3-6.3q-.75.6-1.725.95Q10.6 16 9.5 16q-2.725 0-4.612-1.887Q3 12.225 3 9.5q0-2.725 1.888-4.613Q6.775 3 9.5 3t4.613 1.887Q16 6.775 16 9.5q0 1.1-.35 2.075-.35.975-.95 1.725l6.3 6.3ZM9.5 14q1.875 0 3.188-1.312Q14 11.375 14 9.5q0-1.875-1.312-3.188Q11.375 5 9.5 5 7.625 5 6.312 6.312 5 7.625 5 9.5q0 1.875 1.312 3.188Q7.625 14 9.5 14Z"
-                />
-            </svg></button
-        >
-    </div>
-    {#if error}
-        <div class="results">
-            <p class="error">{error}</p>
-        </div>
-    {:else if isProfileResults(state)}
-        <div class="results">
-            {#if state.wasSearch}
+    {#if savedProfiles}
+        {#if !state.addPage}
+            <div class="header">
+                <h1>{wasNoSavedProfiles ? "Welcome" : "Welcome back"}</h1>
                 <p>
-                    {state.profiles.length} result{state.profiles.length != 1
-                        ? "s"
-                        : ""}
+                    {wasNoSavedProfiles
+                        ? savedProfiles.length == 0
+                            ? "Get started by adding your Bungie account."
+                            : "Start the overlay by hitting confirm."
+                        : "Want to switch accounts?"}
                 </p>
-            {/if}
-            {#each state.profiles as profile}
-                <div
-                    class="profile {selectedProfile == profile
-                        ? 'selected'
-                        : ''}"
-                    on:click={(e) => {
-                        let target = e.target;
-                        if (
-                            target instanceof Element &&
-                            target.classList.contains("delete-button-component")
-                        ) {
-                            e.preventDefault();
-                            return;
-                        }
-
-                        selectedProfile = profile;
-                    }}
-                >
-                    <div
-                        class="platform-icon"
-                        style="background-image: url('{iconPaths[
-                            profile.membershipType
-                        ]}')"
+            </div>
+            <div class="padded results">
+                {#each savedProfiles as profile}
+                    <ProfileWidget
+                        {profile}
+                        selected={areProfilesEqual(profile, selectedProfile)}
+                        clickCallback={() => (selectedProfile = profile)}
+                        deleteCallback={() => deleteSavedProfile(profile)}
                     />
-                    <span
-                        >{profile.bungieGlobalDisplayName}#{profile.bungieGlobalDisplayNameCode}</span
+                {/each}
+                <ProfileAddWidget
+                    clickCallback={() => (state = defaultState(true))}
+                />
+                {#if state.error}
+                    <p class="error">{state.error}</p>
+                {/if}
+                <div class="button-wrapper right">
+                    <LineButton
+                        clickCallback={confirm}
+                        disabled={!selectedProfile}>Confirm</LineButton
                     >
-                    {#if !state.wasSearch}
-                        <button
-                            class="delete-button-component"
-                            on:click={() => deleteSavedProfile(profile)}
-                            ><svg
-                                class="delete-button-component"
-                                xmlns="http://www.w3.org/2000/svg"
+                </div>
+            </div>
+        {:else}
+            <div class="header elem-above">
+                <div class="back-wrapper">
+                    <LineButton
+                        clickCallback={() => (state = defaultState(false))}
+                        >Back</LineButton
+                    >
+                </div>
+                <h1>Search</h1>
+                <p>Enter your Bungie ID below.</p>
+            </div>
+            <div class="search">
+                <p class="placeholder">
+                    <span class="invisible">{placeholder.hidden}</span><span
+                        >{placeholder.shown}</span
+                    >
+                </p>
+                <input
+                    bind:value={input}
+                    on:keydown={inputKeyDown}
+                    spellcheck="false"
+                    maxlength="31"
+                /><button
+                    bind:this={searchButton}
+                    on:click={search}
+                    disabled={(state.hasSearched &&
+                        !state.searchResults &&
+                        !state.error) ||
+                        !input.split("#")[0] ||
+                        !input.split("#")[1]}
+                    ><svg xmlns="http://www.w3.org/2000/svg">
+                        <path
+                            d="m19.6 21-6.3-6.3q-.75.6-1.725.95Q10.6 16 9.5 16q-2.725 0-4.612-1.887Q3 12.225 3 9.5q0-2.725 1.888-4.613Q6.775 3 9.5 3t4.613 1.887Q16 6.775 16 9.5q0 1.1-.35 2.075-.35.975-.95 1.725l6.3 6.3ZM9.5 14q1.875 0 3.188-1.312Q14 11.375 14 9.5q0-1.875-1.312-3.188Q11.375 5 9.5 5 7.625 5 6.312 6.312 5 7.625 5 9.5q0 1.875 1.312 3.188Q7.625 14 9.5 14Z"
+                        />
+                    </svg></button
+                >
+            </div>
+            <div class="padded">
+                {#if state.searchResults}
+                    <p class="result-count">
+                        {state.searchResults.length} result{state.searchResults
+                            .length != 1
+                            ? "s"
+                            : ""}
+                    </p>
+                    {#each state.searchResults as profile}
+                        <ProfileWidget
+                            {profile}
+                            selected={areProfilesEqual(
+                                profile,
+                                state.searchSelectedProfile
+                            )}
+                            clickCallback={() =>
+                                (state.searchSelectedProfile = profile)}
+                        />
+                    {/each}
+                    {#if state.searchResults.length > 0}
+                        <div class="button-wrapper right">
+                            <LineButton
+                                clickCallback={() => {
+                                    addSavedProfile(
+                                        state.searchSelectedProfile
+                                    );
+                                    state = defaultState(false);
+                                }}
+                                disabled={!state.searchSelectedProfile}
+                                >Add</LineButton
                             >
-                                <path
-                                    class="delete-button-component"
-                                    d="M6.062 15 5 13.938 8.938 10 5 6.062 6.062 5 10 8.938 13.938 5 15 6.062 11.062 10 15 13.938 13.938 15 10 11.062Z"
-                                />
-                            </svg></button
-                        >
+                        </div>
                     {/if}
-                </div>
-            {/each}
-            {#if state.profiles.length > 0}
-                <div class="confirm-wrapper">
-                    <button on:click={confirm} disabled={!selectedProfile}
-                        >Confirm</button
-                    >
-                </div>
-            {/if}
-        </div>
+                {:else if state.error}
+                    <p class="error">{state.error}</p>
+                {:else if state.hasSearched}
+                    <div class="loader">
+                        <Loader />
+                    </div>
+                {/if}
+            </div>
+        {/if}
     {:else}
-        <div class="loader">
+        <div class="loader centered">
             <Loader />
         </div>
     {/if}
 </Window>
 
 <style>
-    button {
-        cursor: pointer;
-    }
-
-    button:disabled {
-        cursor: not-allowed;
-    }
-
     .header {
         margin: 24px 48px;
+    }
+
+    .header.elem-above {
+        margin-top: 0;
     }
 
     .header h1 {
@@ -281,7 +308,6 @@
 
     .search {
         text-align: center;
-        position: relative;
     }
 
     .search input {
@@ -293,7 +319,7 @@
         border-bottom: 1px solid;
         border-image-slice: 1;
         border-image-source: linear-gradient(
-            90deg,
+            45deg,
             rgba(255, 255, 255, 0.1),
             rgba(255, 255, 255, 0.1)
         );
@@ -303,10 +329,17 @@
         box-sizing: border-box;
     }
 
-    .search input:hover,
+    .search input:hover {
+        border-image-source: linear-gradient(
+            45deg,
+            var(--primary-highlight),
+            var(--primary-highlight)
+        );
+    }
+
     .search input:focus {
         border-image-source: linear-gradient(
-            90deg,
+            45deg,
             var(--secondary-highlight-light),
             var(--primary-highlight-light)
         );
@@ -314,12 +347,12 @@
 
     .placeholder {
         position: absolute;
-        left: calc(40vw / 2);
+        left: calc((40vw / 2));
         width: calc(60vw - 40px);
         height: 40px;
         color: #aaa;
         font-size: 20px;
-        line-height: 41px;
+        line-height: 40px;
         text-align: left;
         pointer-events: none;
         white-space: nowrap;
@@ -340,7 +373,7 @@
     .search button svg {
         padding: 8px;
         transition: fill 0.1s;
-        fill: #aaa;
+        fill: rgba(255, 255, 255, 0.15);
     }
 
     .search button:not(:disabled) svg {
@@ -350,114 +383,46 @@
     .loader {
         position: absolute;
         left: 50%;
-        transform: translate(-50%, 20px);
+        transform: translate(-50%, 0);
         z-index: -1;
         pointer-events: none;
+        margin-top: 24px;
     }
 
-    .results {
-        text-align: center;
+    .loader.centered {
+        margin: 0;
+        top: 50%;
+        transform: translate(-50%, -50%);
+    }
+
+    .padded {
         width: 60vw;
-        margin: 0 auto;
-        margin-top: 8px;
+        margin-left: auto;
+        margin-right: auto;
     }
 
-    .results p {
+    .result-count {
         color: #aaa;
         font-size: 12px;
-        text-align: left;
+        margin-top: 6px;
         margin-bottom: 20px;
     }
 
-    .results p.error {
+    .error {
         color: #b53e3e;
-    }
-
-    .results .profile {
-        padding: 16px;
-        padding-right: 12px;
-        text-align: left;
-        border: 1px solid;
-        border-image-source: linear-gradient(
-            90deg,
-            rgba(255, 255, 255, 0.1),
-            rgba(255, 255, 255, 0.1)
-        );
-        cursor: pointer;
-        border-image-slice: 1;
-        transition: border-image-source 0.1s;
+        font-size: 14px;
         margin-top: 12px;
     }
 
-    .results .profile:hover,
-    .results .profile.selected {
-        border-image-source: linear-gradient(
-            90deg,
-            var(--secondary-highlight-light),
-            var(--primary-highlight-light)
-        );
-    }
-
-    .profile .platform-icon {
-        display: inline-block;
-        width: 24px;
-        height: 24px;
-        vertical-align: middle;
-        margin-right: 8px;
-        background-size: contain;
-        background-repeat: no-repeat;
-        background-position: center;
-    }
-
-    .profile span {
-        font-size: 16px;
-        vertical-align: middle;
-    }
-
-    .profile button {
-        vertical-align: middle;
-        width: 24px;
-        height: 24px;
-        float: right;
-        padding: 2px;
-        transition: background-color 0.1s;
-    }
-
-    .profile button:hover {
-        background-color: rgba(0, 0, 0, 0.25);
-    }
-
-    .profile button svg {
-        fill: #aaa;
-        transition: fill 0.1s;
-    }
-
-    .profile button:hover svg {
-        fill: #fff;
-    }
-
-    .results .confirm-wrapper {
+    .button-wrapper {
         margin: 16px 0;
-        text-align: right;
     }
 
-    .confirm-wrapper button {
-        color: #eee;
-        padding: 8px 10px;
-        font-family: "Inter Tight";
-        font-size: 14px;
-        transition: box-shadow 0.2s, color 0.1s;
-        box-shadow: 0 -1px 0 var(--primary-highlight) inset;
-        height: 36px;
+    .back-wrapper {
+        margin-bottom: 16px;
     }
 
-    .confirm-wrapper button:hover:not(:disabled) {
-        color: #fff;
-        box-shadow: 0 -4px 0 var(--primary-highlight) inset;
-    }
-
-    .confirm-wrapper button:disabled {
-        color: #777;
-        box-shadow: 0 -1px 0 rgba(255, 255, 255, 0.1) inset;
+    .right {
+        float: right;
     }
 </style>

@@ -48,11 +48,11 @@ body {
 }
 
 :root {
-    --primary-highlight: #702bb5;
-    --secondary-highlight: #4d259c;
+    --primary-highlight: #74259c;
+    --secondary-highlight: #592bb5;
 
-    --primary-highlight-light: #8032cf;
-    --secondary-highlight-light: #592bb5;
+    --primary-highlight-light: #912fc2;
+    --secondary-highlight-light: #6c35db;
 
     --primary-background: #12171c;
     --secondary-background: #180f1c;
@@ -76,4 +76,12 @@ body {
 
 ::-webkit-scrollbar-thumb:hover {
     background: rgba(255, 255, 255, 0.2);
+}
+
+button {
+    cursor: pointer;
+}
+
+button:disabled {
+    cursor: not-allowed;
 }
