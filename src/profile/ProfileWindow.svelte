@@ -347,7 +347,7 @@
 
     .placeholder {
         position: absolute;
-        left: calc((40vw / 2));
+        left: calc(40vw / 2);
         width: calc(60vw - 40px);
         height: 40px;
         color: #aaa;
