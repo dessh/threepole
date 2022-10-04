@@ -1,6 +1,7 @@
 <script lang="ts">
     import { invoke } from "@tauri-apps/api/tauri";
     import { appWindow } from "@tauri-apps/api/window";
+    import LineButton from "../svelte/LineButton.svelte";
     import Window from "../svelte/Window.svelte";
     import StyledCheckbox from "./StyledCheckbox.svelte";
 
@@ -62,7 +63,7 @@
                 </div>
             </div>
             <div class="actions">
-                <button class="confirm" on:click={confirm}>Confirm</button>
+                <LineButton clickCallback={confirm}>Confirm</LineButton>
             </div>
         </div>
     {/if}
@@ -71,7 +72,6 @@
 <style>
     h1 {
         margin: 24px 48px;
-        margin-bottom: 0;
     }
 
     .preferences {
@@ -79,8 +79,9 @@
     }
 
     .subheader {
-        font-size: 20px;
+        font-size: 18px;
         margin-bottom: 8px;
+        font-weight: 500;
     }
 
     .preference-group {
@@ -99,22 +100,5 @@
     .actions {
         margin-top: 24px;
         float: right;
-    }
-
-    button {
-        color: #eee;
-        padding: 8px 10px;
-        font-family: "Inter Tight";
-        font-size: 14px;
-        transition: border 0.1s, box-shadow 0.2s, color 0.1s;
-        height: 36px;
-        cursor: pointer;
-        margin-left: 16px;
-        box-shadow: 0 -1px 0 var(--primary-highlight) inset;
-    }
-
-    button:hover {
-        color: #fff;
-        box-shadow: 0 -4px 0 var(--primary-highlight) inset;
     }
 </style>

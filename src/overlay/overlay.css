@@ -8,11 +8,6 @@
     }
 }
 
-
-body {
-    font-family: "Inter Tight";
-}
-
 #loader {
     position: absolute;
     left: 16px;
@@ -84,13 +79,18 @@ svg {
 }
 
 .popup p.title {
-    font-weight: 600;
     font-size: 18px;
     margin-bottom: 6px;
     color: #fff;
+    font-weight: 500;
 }
 
 .popup p {
     font-size: 15px;
     color: #ddd;
+    font-weight: 300;
+}
+
+.popup strong {
+    font-weight: 500;
 }

@@ -8,12 +8,11 @@
 <style>
     button {
         color: #eee;
-        padding: 8px 10px;
+        padding: 10px;
         font-family: "Inter Tight";
         font-size: 14px;
         transition: box-shadow 0.2s, color 0.1s;
         box-shadow: 0 -1px 0 var(--primary-highlight) inset;
-        height: 36px;
     }
 
     button:hover:not(:disabled) {

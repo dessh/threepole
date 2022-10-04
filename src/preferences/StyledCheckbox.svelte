@@ -18,12 +18,12 @@
 
     button {
         display: inline-block;
-        width: 20px;
-        height: 20px;
+        width: 16px;
+        height: 16px;
         margin-right: 12px;
         border: 1px solid rgba(255, 255, 255, 0.1);
         background-color: rgba(0, 0, 0, 0.1);
-        vertical-align: top;
+        vertical-align: middle;
         border-radius: 2px;
         transition: background-color 0.1s;
     }
@@ -40,17 +40,17 @@
         display: inline-block;
         height: 20px;
         font-size: 14px;
-        vertical-align: top;
+        vertical-align: middle;
         line-height: 20px;
     }
 
     .checkmark {
         position: absolute;
         opacity: 0;
-        left: 7px;
-        top: 3px;
-        width: 4px;
-        height: 10px;
+        left: 6px;
+        top: 6px;
+        width: 3px;
+        height: 8px;
         border: solid #fff;
         border-width: 0 2px 2px 0;
         transform: rotate(45deg);
