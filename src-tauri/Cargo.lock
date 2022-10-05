@@ -1534,7 +1534,7 @@ dependencies = [
  "dirs-next",
  "objc-foundation",
  "objc_id",
- "time 0.3.14",
+ "time 0.3.15",
 ]
 
 [[package]]
@@ -2096,7 +2096,7 @@ dependencies = [
  "indexmap",
  "line-wrap",
  "serde",
- "time 0.3.14",
+ "time 0.3.15",
  "xml-rs",
 ]
 
@@ -2702,9 +2702,9 @@ dependencies = [
 
 [[package]]
 name = "smallvec"
-version = "1.9.0"
+version = "1.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2fd0db749597d91ff862fd1d55ea87f7855a744a8425a64695b6fca237d1dad1"
+checksum = "a507befe795404456341dfab10cef66ead4c041f62b8b11bbb92bffe5d0953e0"
 
 [[package]]
 name = "socket2"
@@ -2911,7 +2911,7 @@ dependencies = [
 [[package]]
 name = "tauri"
 version = "1.1.1"
-source = "git+https://github.com/tauri-apps/tauri.git#321f3fed19df40c1223099bce953332b7f00f7a9"
+source = "git+https://github.com/tauri-apps/tauri.git#4cbdf0fb1c0de5004eab51c36d5843a9816f18af"
 dependencies = [
  "anyhow",
  "attohttpc",
@@ -2954,7 +2954,7 @@ dependencies = [
  "tauri-utils 1.1.1 (git+https://github.com/tauri-apps/tauri.git)",
  "tempfile",
  "thiserror",
- "time 0.3.14",
+ "time 0.3.15",
  "tokio",
  "url",
  "uuid 1.1.2",
@@ -2983,7 +2983,7 @@ dependencies = [
 [[package]]
 name = "tauri-codegen"
 version = "1.1.1"
-source = "git+https://github.com/tauri-apps/tauri.git#321f3fed19df40c1223099bce953332b7f00f7a9"
+source = "git+https://github.com/tauri-apps/tauri.git#4cbdf0fb1c0de5004eab51c36d5843a9816f18af"
 dependencies = [
  "base64",
  "brotli",
@@ -3000,7 +3000,7 @@ dependencies = [
  "sha2",
  "tauri-utils 1.1.1 (git+https://github.com/tauri-apps/tauri.git)",
  "thiserror",
- "time 0.3.14",
+ "time 0.3.15",
  "uuid 1.1.2",
  "walkdir",
 ]
@@ -3008,7 +3008,7 @@ dependencies = [
 [[package]]
 name = "tauri-macros"
 version = "1.1.1"
-source = "git+https://github.com/tauri-apps/tauri.git#321f3fed19df40c1223099bce953332b7f00f7a9"
+source = "git+https://github.com/tauri-apps/tauri.git#4cbdf0fb1c0de5004eab51c36d5843a9816f18af"
 dependencies = [
  "heck 0.4.0",
  "proc-macro2",
@@ -3021,7 +3021,7 @@ dependencies = [
 [[package]]
 name = "tauri-runtime"
 version = "0.11.1"
-source = "git+https://github.com/tauri-apps/tauri.git#321f3fed19df40c1223099bce953332b7f00f7a9"
+source = "git+https://github.com/tauri-apps/tauri.git#4cbdf0fb1c0de5004eab51c36d5843a9816f18af"
 dependencies = [
  "gtk",
  "http",
@@ -3040,7 +3040,7 @@ dependencies = [
 [[package]]
 name = "tauri-runtime-wry"
 version = "0.11.1"
-source = "git+https://github.com/tauri-apps/tauri.git#321f3fed19df40c1223099bce953332b7f00f7a9"
+source = "git+https://github.com/tauri-apps/tauri.git#4cbdf0fb1c0de5004eab51c36d5843a9816f18af"
 dependencies = [
  "cocoa",
  "gtk",
@@ -3085,7 +3085,7 @@ dependencies = [
 [[package]]
 name = "tauri-utils"
 version = "1.1.1"
-source = "git+https://github.com/tauri-apps/tauri.git#321f3fed19df40c1223099bce953332b7f00f7a9"
+source = "git+https://github.com/tauri-apps/tauri.git#4cbdf0fb1c0de5004eab51c36d5843a9816f18af"
 dependencies = [
  "brotli",
  "ctor",
@@ -3193,9 +3193,9 @@ dependencies = [
 
 [[package]]
 name = "time"
-version = "0.3.14"
+version = "0.3.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3c3f9a28b618c3a6b9251b6908e9c99e04b9e5c02e6581ccbb67d59c34ef7f9b"
+checksum = "d634a985c4d4238ec39cacaed2e7ae552fbd3c476b552c1deac3021b7d7eaf0c"
 dependencies = [
  "itoa 1.0.3",
  "libc",
