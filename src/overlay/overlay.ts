@@ -120,8 +120,6 @@ async function refreshActivity(force: boolean) {
 
     let res: CurrentActivity = await invoke("get_current_activity");
 
-    console.log(res);
-
     let newTime = new Date(res.latestActivityStarted);
     if (!currentActivity || newTime > currentActivity.startTime) { // In case Bungie API returns an old current activity (can happen)
         currentActivity = { startTime: newTime, isRaid: res.isRaid };
