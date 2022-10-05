@@ -5,19 +5,19 @@ type BungieProfile = {
     bungieGlobalDisplayNameCode: number;
 };
 
-type ThreepoleProfiles = {
-    savedProfiles: ThreepoleProfile[],
-    selectedProfile: ThreepoleProfile | null,
+type Profiles = {
+    savedProfiles: Profile[],
+    selectedProfile: Profile | null,
 }
 
-type ThreepoleProfile = {
+type Profile = {
     accountPlatform: number;
     accountId: string;
 };
 
-type ThreepoleDisplayProfile = {
+type DisplayProfile = {
     displayName: string;
     displayTag: number;
 };
 
-export type { BungieProfile, ThreepoleProfiles, ThreepoleProfile, ThreepoleDisplayProfile };
+export type { BungieProfile, Profiles, Profile, DisplayProfile };

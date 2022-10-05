@@ -46,12 +46,14 @@ struct ActivityTypeCache(Mutex<HashMap<usize, usize>>);
 struct DisplayProfileCache(Mutex<HashMap<Profile, DisplayProfile>>);
 
 #[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
 struct CurrentActivity {
     latest_activity_started: DateTime<Utc>,
     is_raid: bool,
 }
 
 #[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
 struct ActivityHistory {
     total_today: usize,
     latest_activity_completed: Option<CompletedActivity>,
@@ -103,6 +105,7 @@ impl Serialize for SerializableError {
         S: serde::Serializer,
     {
         #[derive(Serialize)]
+        #[serde(rename_all = "camelCase")]
         struct ErrorSerialization {
             message: String,
             backtrace: String,

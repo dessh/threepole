@@ -4,12 +4,7 @@
     import LineButton from "../svelte/LineButton.svelte";
     import Window from "../svelte/Window.svelte";
     import StyledCheckbox from "./StyledCheckbox.svelte";
-
-    type Preferences = {
-        displayDailyClears: boolean;
-        displayClearNotifications: boolean;
-        displayMilliseconds: boolean;
-    };
+    import type { Preferences } from "./types";
 
     let preferences: Preferences;
     let error: string;

@@ -3,14 +3,14 @@
     import { appWindow } from "@tauri-apps/api/window";
     import LineButton from "../svelte/LineButton.svelte";
     import Window from "../svelte/Window.svelte";
-    import Loader from "./Loader.svelte";
-    import ProfileWidget from "./Profile.svelte";
-    import ProfileAddWidget from "./ProfileAdd.svelte";
+    import Loader from "./LoaderWidget.svelte";
+    import ProfileWidget from "./ProfileWidget.svelte";
+    import ProfileAddWidget from "./ProfileAddWidget.svelte";
     import type {
         BungieProfile,
-        ThreepoleProfiles,
-        ThreepoleDisplayProfile,
-        ThreepoleProfile,
+        Profiles,
+        DisplayProfile,
+        Profile,
     } from "./types";
 
     type State = {
@@ -46,12 +46,12 @@
     }
 
     async function init() {
-        let p: ThreepoleProfiles = await invoke("get_profiles");
+        let p: Profiles = await invoke("get_profiles");
 
         let profiles: BungieProfile[] = [];
 
         for (let profile of p.savedProfiles) {
-            let displayProfile: ThreepoleDisplayProfile;
+            let displayProfile: DisplayProfile;
 
             try {
                 displayProfile = await invoke("get_display_profile", {
@@ -148,7 +148,7 @@
         }
     }
 
-    function convertProfile(profile: BungieProfile): ThreepoleProfile {
+    function convertProfile(profile: BungieProfile): Profile {
         return {
             accountPlatform: profile.membershipType,
             accountId: profile.membershipId,
