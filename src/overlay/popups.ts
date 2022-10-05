@@ -39,11 +39,11 @@ function showQueuedPopups() {
 
         setTimeout(() => {
             popup.classList.add("fade-out");
-        }, 4600);
+        }, 7600);
 
         setTimeout(() => {
             popupPanel.removeChild(popup);
-        }, 5000);
+        }, 8000);
     }
 
     queuedPopups = [];
