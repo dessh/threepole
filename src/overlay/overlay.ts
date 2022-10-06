@@ -80,7 +80,7 @@ function refresh(playerData: PlayerData | null) {
 
     currentActivity = playerData.currentActivity;
 
-    if (currentActivity) {
+    if (currentActivity && currentActivity.activityInfo.activityTypeHash == RAID_ACTIVITY_TYPE) {
         timerElem.classList.remove("hidden");
     } else {
         timerElem.classList.add("hidden");
