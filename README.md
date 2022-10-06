@@ -22,4 +22,4 @@ Threepole is a clean, minimal raid overlay written in Rust and TypeScript that d
 Grab the latest release from this repo's [GitHub releases](https://github.com/dessh/threepole/releases) page.
 
 ## Acknowledgements
-Thanks to **Giraf#3680**, **IcyNips7#9827**, and the other testers during beta.
+Thanks to **Giraf**, **Icy**, and the other testers during beta.
