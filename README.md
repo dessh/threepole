@@ -1,5 +1,5 @@
 <div align="center">
-    <img src="./assets/banner.png" height="256px" alt="threepole banner"/>
+    <img src="./assets/banner.png" alt="threepole banner"/>
 </div>
 
 ---
