@@ -17,8 +17,8 @@ function showQueuedPopups() {
         let popup = document.createElement("div");
         popup.classList.add("popup");
 
-        let icon = document.createElement("img");
-        icon.src = "/icon.png";
+        let glyph = document.createElement("img");
+        glyph.src = "/glyph_shadow.png";
 
         let contents = document.createElement("div");
 
@@ -32,7 +32,7 @@ function showQueuedPopups() {
         contents.appendChild(title);
         contents.appendChild(subtext);
 
-        popup.appendChild(icon);
+        popup.appendChild(glyph);
         popup.appendChild(contents);
 
         popupPanel.appendChild(popup);
