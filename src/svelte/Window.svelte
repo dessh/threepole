@@ -1,7 +1,7 @@
 <script lang="ts">
     import { appWindow } from "@tauri-apps/api/window";
 
-    window.addEventListener("load", () => {
+    window.addEventListener("DOMContentLoaded", () => {
         appWindow.show();
         appWindow.setFocus();
     });
