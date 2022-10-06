@@ -3,10 +3,11 @@ import "./overlay.css"
 import { appWindow } from "@tauri-apps/api/window";
 import { invoke } from "@tauri-apps/api/tauri";
 import createPopup from "./popups";
-import type { ActivityHistory, CurrentActivity } from "./types";
 import type { Preferences } from "../preferences/types";
-import type { ThreepoleEvent } from "src/types";
-import type { DisplayProfile, Profiles } from "../profile/types";
+import type { RustResult, TauriEvent } from "../types";
+import type { Profiles, ProfileInfo } from "../profile/types";
+import type { CurrentActivity, PlayerData } from "./types";
+import { RAID_ACTIVITY_TYPE } from "../consts";
 
 const loaderElem = document.querySelector<HTMLElement>("#loader")!;
 const widgetElem = document.querySelector<HTMLElement>("#widget")!;
@@ -16,28 +17,18 @@ const msElem = document.querySelector<HTMLElement>("#ms")!;
 const counterElem = document.querySelector<HTMLElement>("#counter")!;
 const dailyElem = document.querySelector<HTMLElement>("#daily")!;
 
-let currentActivity: {
-    startTime: Date;
-    isRaid: boolean;
-} | null;
-
-let latestActivityCompleted: {
-    period: Date;
-    instanceId: string | null;
-} | null;
+let currentActivity: CurrentActivity;
+let lastRaidId = null;
+let doneInitialRefresh = false;
 
 let shown = false;
 let prefs: Preferences;
 let timerInterval;
 
-let currentTotal = 0;
-let lastProfileWasSuccessful = true;
-let lastHistoryWasSuccessful = true;
-
 async function init() {
     appWindow.listen("show", () => {
         if (!timerInterval) {
-            timerInterval = setInterval(timerTick, 1000 / 21);
+            timerInterval = setInterval(timerTick, 1000 / 30);
         }
 
         appWindow.show();
@@ -54,14 +45,74 @@ async function init() {
         }
     });
 
-    appWindow.listen("update_profiles", (p: ThreepoleEvent<Profiles>) => forceRefresh(p.payload));
-    appWindow.listen("update_preferences", (p: ThreepoleEvent<Preferences>) => applyPreferences(p.payload));
+    appWindow.listen("update_preferences", (p: TauriEvent<Preferences>) => applyPreferences(p.payload));
+
+    appWindow.listen("playerdata_update", (e: TauriEvent<RustResult<PlayerData> | null>) => {
+        // if the initial refresh returned null (meaning refresh was in prog), and this returns err, overlay won't get latest data till next successful refresh
+        if (e.payload?.Err) {
+            if (!doneInitialRefresh) {
+                createPopup({ title: "Failed to fetch initial stats", subtext: e.payload.Err });
+            }
+            return;
+        }
+
+        refresh(e.payload?.Ok);
+    });
+
+    refresh(await invoke("get_playerdata")); // the initial refresh
 
     let prefs: Preferences = await invoke("get_preferences");
     applyPreferences(prefs);
+}
 
+function refresh(playerData: PlayerData | null) {
+    if (!playerData) {
+        loaderElem.classList.remove("hidden");
+        widgetElem.classList.add("hidden");
+
+        currentActivity = null;
+        doneInitialRefresh = false;
+        return;
+    } else {
+        loaderElem.classList.add("hidden");
+        widgetElem.classList.remove("hidden");
+    }
+
+    currentActivity = playerData.currentActivity;
+
+    if (currentActivity) {
+        timerElem.classList.remove("hidden");
+    } else {
+        timerElem.classList.add("hidden");
+    }
+
+    dailyElem.innerText = String(playerData.activityHistory.length);
+
+    if (doneInitialRefresh && playerData.activityHistory[0] && lastRaidId != playerData.activityHistory[0].instanceId && prefs.displayClearNotifications) {
+        createPopup({ title: "Raid clear result", subtext: `API Time: <strong>${playerData.activityHistory[0].activityDuration}</strong>` });
+    }
+
+    lastRaidId = playerData.activityHistory[0]?.instanceId;
+
+    if (!doneInitialRefresh) {
+        showWelcomePopup();
+    }
+
+    doneInitialRefresh = true;
+}
+
+async function showWelcomePopup() {
     let profiles: Profiles = await invoke("get_profiles");
-    forceRefresh(profiles);
+
+    if (!profiles.selectedProfile) {
+        return;
+    }
+
+    let profileInfo: ProfileInfo = await invoke("get_profile_info", {
+        profile: profiles.selectedProfile,
+    });
+
+    createPopup({ title: `${profileInfo.displayName}#${profileInfo.displayTag}`, subtext: "Threepole is active." });
 }
 
 function applyPreferences(p: Preferences) {
@@ -80,91 +131,12 @@ function applyPreferences(p: Preferences) {
     }
 }
 
-async function forceRefresh(p: Profiles) {
-    currentActivity = null;
-    latestActivityCompleted = null;
-
-    loaderElem.classList.remove("hidden");
-    widgetElem.classList.add("hidden");
-
-    try {
-        await refreshActivity(true);
-        await refreshHistory(true);
-
-        let selectedProfile = p.selectedProfile;
-
-        if (selectedProfile) {
-            let displayProfile: DisplayProfile = await invoke("get_display_profile", {
-                profile: selectedProfile,
-            });
-
-            createPopup({ title: `${displayProfile.displayName}#${displayProfile.displayTag}`, subtext: "Threepole is active." });
-        }
-    } catch (e) {
-        let message = e.message ?? e;
-
-        createPopup({ title: "Failed to fetch initial stats", subtext: message });
-    }
-
-    loaderElem.classList.add("hidden");
-    widgetElem.classList.remove("hidden");
-
-    setInterval(() => refreshActivity(false), 2000);
-    setInterval(() => refreshHistory(false), 10000);
-}
-
-async function refreshActivity(force: boolean) {
-    if (!shown && !force) {
-        return;
-    }
-
-    let res: CurrentActivity = await invoke("get_current_activity");
-
-    let newTime = new Date(res.latestActivityStarted);
-    if (!currentActivity || newTime > currentActivity.startTime) { // In case Bungie API returns an old current activity (can happen)
-        currentActivity = { startTime: newTime, isRaid: res.isRaid };
-    }
-
-    if (currentActivity?.isRaid) {
-        timerElem.classList.remove("hidden");
-    } else {
-        timerElem.classList.add("hidden");
-    }
-}
-
-async function refreshHistory(force: boolean) {
-    if (!shown && !force) {
-        return;
-    }
-
-    let res: ActivityHistory = await invoke("get_history");
-
-    let newTime = new Date(res.latestActivityCompleted?.period);
-    if (!latestActivityCompleted || newTime > latestActivityCompleted?.period) { // In case Bungie API returns an old activity history list
-        if (latestActivityCompleted && res.latestActivityCompleted && latestActivityCompleted.instanceId != res.latestActivityCompleted.instanceId && prefs?.displayClearNotifications) {
-            createPopup({ title: "Raid clear result", subtext: `API Time: <strong>${res.latestActivityCompleted.activityDuration}</strong>` });
-        }
-
-        latestActivityCompleted = {
-            period: newTime,
-            instanceId: res.latestActivityCompleted?.instanceId,
-        };
-
-    }
-
-    if (res.totalToday > currentTotal) {
-        currentTotal = res.totalToday;
-    }
-
-    dailyElem.innerText = String(currentTotal);
-}
-
 function timerTick() {
-    if (!shown || !currentActivity) {
+    if (!shown || !currentActivity || currentActivity.activityInfo.activityTypeHash != RAID_ACTIVITY_TYPE) {
         return;
     }
 
-    let millis = Number(new Date()) - Number(currentActivity.startTime);
+    let millis = Number(new Date()) - Number(new Date(currentActivity.startDate));
     timeElem.innerHTML = formatTime(millis);
     msElem.innerHTML = formatMillis(millis);
 }

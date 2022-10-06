@@ -9,7 +9,7 @@
     import type {
         BungieProfile,
         Profiles,
-        DisplayProfile,
+        ProfileInfo,
         Profile,
     } from "./types";
 
@@ -51,21 +51,21 @@
         let profiles: BungieProfile[] = [];
 
         for (let profile of p.savedProfiles) {
-            let displayProfile: DisplayProfile;
+            let profileInfo: ProfileInfo;
 
             try {
-                displayProfile = await invoke("get_display_profile", {
+                profileInfo = await invoke("get_profile_info", {
                     profile,
                 });
-            } catch {
+            } catch (e) {
                 continue;
             }
 
             let bungieProfile = {
                 membershipType: profile.accountPlatform,
                 membershipId: profile.accountId,
-                bungieGlobalDisplayName: displayProfile.displayName,
-                bungieGlobalDisplayNameCode: displayProfile.displayTag,
+                bungieGlobalDisplayName: profileInfo.displayName,
+                bungieGlobalDisplayNameCode: profileInfo.displayTag,
             };
 
             profiles.push(bungieProfile);
@@ -164,9 +164,7 @@
                 savedProfiles: newSavedProfiles,
                 selectedProfile: newSelectedProfile,
             },
-        })
-            .then(() => appWindow.close())
-            .catch((e) => (state.error = e.message ?? e));
+        }).then(() => appWindow.close());
     }
 
     init();

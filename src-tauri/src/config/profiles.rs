@@ -13,7 +13,7 @@ pub struct Profiles {
     pub selected_profile: Option<Profile>,
 }
 
-#[derive(Serialize, Deserialize, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq, Hash)]
 #[serde(rename_all = "camelCase")]
 pub struct Profile {
     pub account_platform: usize,

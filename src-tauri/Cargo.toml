@@ -20,6 +20,7 @@ directories = "4.0"
 reqwest = "0.11"
 chrono = { version = "0.4", features = ["serde"] }
 raw-window-handle = "0.5"
+async-trait = "0.1"
 
 [features]
 # by default Tauri runs in production mode

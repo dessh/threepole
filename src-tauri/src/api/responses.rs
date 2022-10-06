@@ -5,14 +5,15 @@ use serde::{Deserialize, Deserializer, Serialize};
 
 #[derive(Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct DestinyMembership {
+pub struct BungieProfile {
     membership_type: usize,
     membership_id: String,
     bungie_global_display_name: String,
     bungie_global_display_name_code: usize,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct ProfileInfo {
     pub privacy: usize,
     pub display_name: String,
@@ -69,24 +70,24 @@ impl<'de> Deserialize<'de> for ProfileInfo {
 #[derive(Debug)]
 pub struct ProfileCurrentActivities {
     pub privacy: usize,
-    pub activities: Option<Vec<CharacterCurrentActivity>>,
+    pub activities: Option<HashMap<String, LatestCharacterActivity>>,
 }
 
-#[derive(Debug, PartialEq, Eq)]
-pub struct CharacterCurrentActivity {
-    pub character_id: String,
+#[derive(Debug, Serialize, Clone, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct LatestCharacterActivity {
     pub date_activity_started: DateTime<Utc>,
     pub current_activity_hash: usize,
 }
 
-impl PartialOrd for CharacterCurrentActivity {
+impl PartialOrd for LatestCharacterActivity {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         self.date_activity_started
             .partial_cmp(&other.date_activity_started)
     }
 }
 
-impl Ord for CharacterCurrentActivity {
+impl Ord for LatestCharacterActivity {
     fn cmp(&self, other: &Self) -> Ordering {
         self.date_activity_started.cmp(&other.date_activity_started)
     }
@@ -121,11 +122,15 @@ impl<'de> Deserialize<'de> for ProfileCurrentActivities {
         Ok(Self {
             privacy: profile.character_activities.privacy,
             activities: profile.character_activities.data.map(|d| {
-                d.iter()
-                    .map(|e| CharacterCurrentActivity {
-                        character_id: e.0.to_string(),
-                        date_activity_started: e.1.date_activity_started,
-                        current_activity_hash: e.1.current_activity_hash,
+                d.into_iter()
+                    .map(|e| {
+                        (
+                            e.0,
+                            LatestCharacterActivity {
+                                date_activity_started: e.1.date_activity_started,
+                                current_activity_hash: e.1.current_activity_hash,
+                            },
+                        )
                     })
                     .collect()
             }),
@@ -139,12 +144,14 @@ pub struct CharacterActivityHistory {
     pub activities: Option<Vec<CompletedActivity>>,
 }
 
-#[derive(Debug, PartialEq, Eq, Hash, Serialize)]
+#[derive(Debug, PartialEq, Eq, Hash, Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct CompletedActivity {
     pub period: DateTime<Utc>,
     pub instance_id: String,
     pub completed: bool,
     pub activity_duration: String,
+    pub activity_hash: usize,
 }
 
 impl PartialOrd for CompletedActivity {
@@ -176,6 +183,7 @@ impl<'de> Deserialize<'de> for CompletedActivity {
         #[serde(rename_all = "camelCase")]
         struct _ActivityDetails {
             instance_id: String,
+            director_activity_hash: usize,
         }
 
         #[derive(Deserialize)]
@@ -203,6 +211,7 @@ impl<'de> Deserialize<'de> for CompletedActivity {
         Ok(Self {
             period: activity.period,
             instance_id: activity.activity_details.instance_id,
+            activity_hash: activity.activity_details.director_activity_hash,
             completed: activity.values.completed.basic.value == 1.0
                 && activity.values.completion_reason.basic.value == 0.0,
             activity_duration: activity
@@ -214,8 +223,38 @@ impl<'de> Deserialize<'de> for CompletedActivity {
     }
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Serialize, Clone)]
 #[serde(rename_all = "camelCase")]
-pub struct DestinyActivityDefinition {
+pub struct ActivityInfo {
+    pub name: String,
     pub activity_type_hash: usize,
+    pub background_image: Option<String>,
+}
+
+impl<'de> Deserialize<'de> for ActivityInfo {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        #[derive(Deserialize)]
+        #[serde(rename_all = "camelCase")]
+        struct _Activity {
+            display_properties: _DisplayProperties,
+            activity_type_hash: usize,
+            pgcr_image: Option<String>,
+        }
+
+        #[derive(Deserialize)]
+        #[serde(rename_all = "camelCase")]
+        struct _DisplayProperties {
+            name: String,
+        }
+
+        let activity = _Activity::deserialize(deserializer)?;
+        Ok(Self {
+            name: activity.display_properties.name,
+            activity_type_hash: activity.activity_type_hash,
+            background_image: activity.pgcr_image,
+        })
+    }
 }

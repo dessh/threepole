@@ -3,136 +3,39 @@
     windows_subsystem = "windows"
 )]
 
-use std::{
-    collections::{HashMap, HashSet},
-    time::Duration,
-};
-
-use anyhow::{anyhow, Error};
 use api::{
-    make_request,
-    responses::{
-        CharacterActivityHistory, CompletedActivity, DestinyActivityDefinition, DestinyMembership,
-        ProfileCurrentActivities, ProfileInfo,
-    },
-    BungieRequest, BungieResponseError,
+    responses::{BungieProfile, ProfileInfo},
+    Api, Source,
 };
-use chrono::{DateTime, Utc};
 use config::{
-    prefs::Preferences,
+    preferences::Preferences,
     profiles::{Profile, Profiles},
     ConfigManager,
 };
-use consts::{APP_NAME, POLL_INTERVAL, RAID_ACTIVITY_TYPE};
-use poller::poll_focus;
-use serde::Serialize;
+use consts::APP_NAME;
+use pollers::{
+    overlay::overlay_poller,
+    playerdata::{PlayerData, PlayerDataPoller},
+};
 use tauri::{
-    async_runtime, AppHandle, CustomMenuItem, Manager, State, SystemTray, SystemTrayEvent,
-    SystemTrayMenu, SystemTrayMenuItem, WindowBuilder, WindowUrl,
+    async_runtime::{self, JoinHandle},
+    AppHandle, CustomMenuItem, Manager, State, SystemTray, SystemTrayEvent, SystemTrayMenu,
+    SystemTrayMenuItem, WindowBuilder, WindowUrl,
 };
 use tokio::sync::Mutex;
 
 mod api;
 mod config;
 mod consts;
-mod poller;
+mod pollers;
 
 struct ConfigContainer(Mutex<ConfigManager>);
 
 #[derive(Default)]
-struct ActivityTypeCache(Mutex<HashMap<usize, usize>>);
+struct PlayerDataPollerContainer(Mutex<PlayerDataPoller>);
 
 #[derive(Default)]
-struct DisplayProfileCache(Mutex<HashMap<Profile, DisplayProfile>>);
-
-#[derive(Serialize)]
-#[serde(rename_all = "camelCase")]
-struct CurrentActivity {
-    latest_activity_started: DateTime<Utc>,
-    is_raid: bool,
-}
-
-#[derive(Serialize)]
-#[serde(rename_all = "camelCase")]
-struct ActivityHistory {
-    total_today: usize,
-    latest_activity_completed: Option<CompletedActivity>,
-}
-
-#[derive(Serialize, Clone)]
-#[serde(rename_all = "camelCase")]
-pub struct DisplayProfile {
-    pub display_name: String,
-    pub display_tag: usize,
-    pub characters: Vec<String>,
-}
-
-impl DisplayProfile {
-    async fn get(
-        profile: Profile,
-        cache: &mut HashMap<Profile, DisplayProfile>,
-    ) -> anyhow::Result<Self> {
-        if cache.contains_key(&profile) {
-            return Ok(cache.get(&profile).unwrap().clone());
-        }
-
-        let res_val = make_request(BungieRequest::GetProfile {
-            membership_type: profile.account_platform,
-            membership_id: &profile.account_id,
-            component: 100,
-        })
-        .await?;
-
-        let res: ProfileInfo = serde_json::from_value(res_val)?;
-
-        let dp = Self {
-            display_name: res.display_name,
-            display_tag: res.display_tag,
-            characters: res.character_ids,
-        };
-
-        cache.insert(profile, dp.clone());
-
-        Ok(dp)
-    }
-}
-
-struct SerializableError(Error);
-
-impl Serialize for SerializableError {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        #[derive(Serialize)]
-        #[serde(rename_all = "camelCase")]
-        struct ErrorSerialization {
-            message: String,
-            backtrace: String,
-        }
-
-        ErrorSerialization {
-            message: self.0.to_string(),
-            backtrace: self.0.backtrace().to_string(),
-        }
-        .serialize(serializer)
-    }
-}
-
-#[tauri::command]
-async fn search_profile(
-    display_name: String,
-    display_name_code: usize,
-) -> Result<Vec<DestinyMembership>, SerializableError> {
-    let res = make_request(BungieRequest::SearchDestinyPlayerByBungieName {
-        display_name: &display_name,
-        display_name_code,
-    })
-    .await
-    .map_err(|e| SerializableError(e.into()))?;
-
-    Ok(serde_json::from_value(res).map_err(|e| SerializableError(e.into()))?)
-}
+struct OverlayPollerHandle(Mutex<Option<JoinHandle<()>>>);
 
 #[tauri::command]
 async fn get_preferences(container: State<'_, ConfigContainer>) -> Result<Preferences, ()> {
@@ -149,22 +52,10 @@ async fn set_preferences(
     lock.set_preferences(preferences.clone()).unwrap();
 
     if let Some(o) = app.get_window("overlay") {
-        o.emit("update_preferences", preferences).unwrap();
+        o.emit("preferences_update", preferences).unwrap();
     }
 
     Ok(())
-}
-
-#[tauri::command]
-async fn get_display_profile(
-    profile: Profile,
-    display_profiles: State<'_, DisplayProfileCache>,
-) -> Result<DisplayProfile, SerializableError> {
-    Ok(
-        DisplayProfile::get(profile, &mut *display_profiles.0.lock().await)
-            .await
-            .map_err(|e| SerializableError(e.into()))?,
-    )
 }
 
 #[tauri::command]
@@ -176,177 +67,41 @@ async fn get_profiles(container: State<'_, ConfigContainer>) -> Result<Profiles,
 async fn set_profiles(
     app: AppHandle,
     profiles: Profiles,
-    container: State<'_, ConfigContainer>,
+    config_container: State<'_, ConfigContainer>,
+    poller_container: State<'_, PlayerDataPollerContainer>,
 ) -> Result<(), ()> {
-    let profiles_clone = profiles.clone();
-
-    let mut lock = container.0.lock().await;
+    let mut lock = config_container.0.lock().await;
     lock.set_profiles(profiles).unwrap();
 
-    if let Some(o) = app.get_window("overlay") {
-        o.emit("update_profiles", profiles_clone).unwrap();
-    } else {
-        create_overlay(&app).unwrap();
-    }
+    poller_container.0.lock().await.reset(app);
 
     Ok(())
 }
 
 #[tauri::command]
-async fn get_current_activity(
-    container: State<'_, ConfigContainer>,
-    activity_types: State<'_, ActivityTypeCache>,
-) -> Result<CurrentActivity, SerializableError> {
-    let profile = {
-        let lock = container.0.lock().await;
-
-        match &lock.get_profiles().selected_profile {
-            Some(p) => p.clone(),
-            None => return Err(SerializableError(anyhow!("No profile set"))),
-        }
-    };
-
-    let res = make_request(BungieRequest::GetProfile {
-        membership_type: profile.account_platform,
-        membership_id: &profile.account_id,
-        component: 204,
-    })
-    .await
-    .map_err(|e| SerializableError(e.into()))?;
-
-    let current_activities: ProfileCurrentActivities =
-        serde_json::from_value(res).map_err(|e| SerializableError(e.into()))?;
-
-    let activities = match current_activities.activities {
-        Some(a) => a,
-        None => return Err(SerializableError(anyhow!("Profile is private"))),
-    };
-
-    let latest_activity = activities
-        .iter()
-        .max()
-        .ok_or(SerializableError(anyhow!("No character data for profile")))?;
-
-    let is_raid = {
-        let mut lock = activity_types.0.lock().await;
-
-        let activity_type = if let Some(v) = lock.get(&latest_activity.current_activity_hash) {
-            *v
-        } else {
-            match make_request(BungieRequest::GetDestinyActivityDefinition {
-                activity_hash: latest_activity.current_activity_hash,
-            })
-            .await
-            {
-                Ok(res) => {
-                    let activity_definition: DestinyActivityDefinition =
-                        serde_json::from_value(res).map_err(|e| SerializableError(e.into()))?;
-
-                    lock.insert(
-                        latest_activity.current_activity_hash,
-                        activity_definition.activity_type_hash,
-                    );
-
-                    activity_definition.activity_type_hash
-                }
-                Err(BungieResponseError::ResponseMissing) => 0,
-                Err(e) => return Err(SerializableError(e.into())),
-            }
-        };
-
-        activity_type == RAID_ACTIVITY_TYPE
-    };
-
-    Ok(CurrentActivity {
-        latest_activity_started: latest_activity.date_activity_started,
-        is_raid,
-    })
+async fn get_profile_info(profile: Profile, api: State<'_, Api>) -> Result<ProfileInfo, String> {
+    Ok(api
+        .profile_info_source
+        .lock()
+        .await
+        .get(profile)
+        .await
+        .map_err(|e| e.to_string())?)
 }
 
 #[tauri::command]
-async fn get_history(
-    container: State<'_, ConfigContainer>,
-    display_profiles: State<'_, DisplayProfileCache>,
-) -> Result<ActivityHistory, SerializableError> {
-    let profile = {
-        let lock = container.0.lock().await;
-
-        match &lock.get_profiles().selected_profile {
-            Some(p) => p.clone(),
-            None => return Err(SerializableError(anyhow!("No profile set"))),
-        }
-    };
-
-    let display_profile = {
-        let mut lock = display_profiles.0.lock().await;
-
-        DisplayProfile::get(profile.clone(), &mut *lock)
-            .await
-            .map_err(|e| SerializableError(e.into()))?
-    };
-
-    let mut past_activities: HashSet<CompletedActivity> = HashSet::new();
-
-    let cutoff = {
-        let mut time = Utc::today().and_hms(17, 0, 0); // 5PM UTC
-
-        if time > Utc::now() {
-            time -= chrono::Duration::days(1);
-        }
-
-        time
-    };
-
-    for character_id in display_profile.characters.iter() {
-        let mut page = 0;
-
-        loop {
-            let res = make_request(BungieRequest::GetActivityHistory {
-                membership_type: profile.account_platform,
-                membership_id: &profile.account_id,
-                character_id: &character_id,
-                page,
-            })
-            .await
-            .map_err(|e| SerializableError(e.into()))?;
-
-            let history: CharacterActivityHistory =
-                serde_json::from_value(res).map_err(|e| SerializableError(e.into()))?;
-
-            let activities = match history.activities {
-                Some(a) => a,
-                None => break,
-            };
-
-            let mut includes_past_cutoff = false;
-
-            for activity in activities.into_iter() {
-                if activity.period < cutoff {
-                    includes_past_cutoff = true;
-                } else {
-                    if activity.completed {
-                        past_activities.insert(activity);
-                    }
-                }
-            }
-
-            if includes_past_cutoff {
-                break;
-            }
-
-            page += 1;
-        }
-    }
-
-    Ok(ActivityHistory {
-        total_today: past_activities.len(),
-        latest_activity_completed: past_activities.into_iter().max(),
-    })
+async fn search_profile(
+    display_name: String,
+    display_name_code: usize,
+) -> Result<Vec<BungieProfile>, String> {
+    Ok(Api::search_profile(&display_name, display_name_code)
+        .await
+        .map_err(|e| e.to_string())?)
 }
 
-fn create_overlay(handle: &AppHandle) -> Result<(), tauri::Error> {
+async fn create_overlay(handle: AppHandle) -> Result<(), tauri::Error> {
     let overlay = WindowBuilder::new(
-        handle,
+        &handle,
         "overlay",
         WindowUrl::App("./src/overlay.html".into()),
     )
@@ -367,17 +122,26 @@ fn create_overlay(handle: &AppHandle) -> Result<(), tauri::Error> {
     #[cfg(debug_assertions)]
     overlay.open_devtools();
 
-    async_runtime::spawn(async move {
-        let mut hwnd_names = HashMap::new();
+    let handle_clone = handle.clone();
+    let poller_handle = handle.state::<OverlayPollerHandle>();
+    let mut lock = poller_handle.0.lock().await;
 
-        loop {
-            poll_focus(&overlay, &mut hwnd_names);
+    if let Some(h) = lock.as_ref() {
+        h.abort();
+    }
 
-            tokio::time::sleep(Duration::from_millis(POLL_INTERVAL)).await;
-        }
-    });
+    let handle = async_runtime::spawn(async move { overlay_poller(handle_clone).await });
+
+    *lock = Some(handle);
 
     Ok(())
+}
+
+#[tauri::command]
+async fn get_playerdata(
+    poller_container: State<'_, PlayerDataPollerContainer>,
+) -> Result<Option<PlayerData>, ()> {
+    Ok(poller_container.0.lock().await.get_data())
 }
 
 fn create_profile_window(handle: &AppHandle) -> Result<(), tauri::Error> {
@@ -418,6 +182,10 @@ fn create_preferences_window(handle: &AppHandle) -> Result<(), tauri::Error> {
 
 fn main() -> anyhow::Result<()> {
     tauri::Builder::new()
+        .manage(ConfigContainer(Mutex::new(ConfigManager::load()?)))
+        .manage(Api::default())
+        .manage(PlayerDataPollerContainer::default())
+        .manage(OverlayPollerHandle::default())
         .system_tray(
             SystemTray::new().with_menu(
                 SystemTrayMenu::new()
@@ -445,29 +213,29 @@ fn main() -> anyhow::Result<()> {
                 }
             }
         })
-        .manage(ConfigContainer(Mutex::new(ConfigManager::load()?)))
-        .manage(ActivityTypeCache::default())
-        .manage(DisplayProfileCache::default())
         .invoke_handler(tauri::generate_handler![
             get_preferences,
             set_preferences,
             get_profiles,
             set_profiles,
-            get_display_profile,
+            get_profile_info,
             search_profile,
-            get_current_activity,
-            get_history,
+            get_playerdata,
         ])
         .setup(|app| {
             let handle = app.handle();
 
             async_runtime::spawn(async move {
-                let container = handle.state::<ConfigContainer>();
-                let lock = container.0.lock().await;
+                let config_container = handle.state::<ConfigContainer>();
+                let poller_container = handle.state::<PlayerDataPollerContainer>();
 
-                if lock.get_profiles().selected_profile.is_some() {
-                    create_overlay(&handle).unwrap();
-                } else {
+                create_overlay(handle.clone()).await.unwrap();
+
+                poller_container.0.lock().await.reset(handle.clone());
+
+                let lock = config_container.0.lock().await;
+
+                if lock.get_profiles().selected_profile.is_none() {
                     create_profile_window(&handle).unwrap();
                 }
             });

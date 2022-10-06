@@ -15,9 +15,9 @@ type Profile = {
     accountId: string;
 };
 
-type DisplayProfile = {
+type ProfileInfo = {
     displayName: string;
     displayTag: number;
 };
 
-export type { BungieProfile, Profiles, Profile, DisplayProfile };
+export type { BungieProfile, Profiles, Profile, ProfileInfo };

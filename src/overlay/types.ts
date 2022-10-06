@@ -1,11 +1,17 @@
-type CurrentActivity = {
-    latestActivityStarted: string;
-    isRaid: boolean;
+type PlayerData = {
+    currentActivity: CurrentActivity | null;
+    activityHistory: CompletedActivity[];
 };
 
-type ActivityHistory = {
-    totalToday: number;
-    latestActivityCompleted: CompletedActivity | null;
+type CurrentActivity = {
+    startDate: string;
+    activityInfo: ActivityInfo;
+};
+
+type ActivityInfo = {
+    name: string;
+    activityTypeHash: number;
+    backgroundImage: string;
 }
 
 type CompletedActivity = {
@@ -13,6 +19,7 @@ type CompletedActivity = {
     instanceId: string;
     completed: boolean;
     activityDuration: string;
+    activityHash: number;
 }
 
-export type { CurrentActivity, ActivityHistory, CompletedActivity };
+export type { PlayerData, CurrentActivity, ActivityInfo, CompletedActivity };

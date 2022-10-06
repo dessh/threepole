@@ -1,135 +1,171 @@
+use std::error::Error;
 use std::{
-    error::Error,
+    collections::HashMap,
     fmt::{Display, Formatter},
+    hash::Hash,
 };
 
-use reqwest::{Client, Method, RequestBuilder};
-use serde::Deserialize;
-use serde_json::{json, Value};
+use async_trait::async_trait;
+use tokio::sync::Mutex;
 
-use crate::consts::{API_KEY, API_PATH};
+use self::{
+    requests::{make_request, BungieRequest, BungieResponseError},
+    responses::{
+        ActivityInfo, BungieProfile, CharacterActivityHistory, ProfileCurrentActivities,
+        ProfileInfo,
+    },
+};
+use crate::config::profiles::Profile;
 
+pub mod requests;
 pub mod responses;
 
-pub enum BungieRequest<'a> {
-    SearchDestinyPlayerByBungieName {
-        display_name: &'a str,
-        display_name_code: usize,
-    },
-    GetProfile {
-        membership_type: usize,
-        membership_id: &'a str,
-        component: usize,
-    },
-    GetActivityHistory {
-        membership_type: usize,
-        membership_id: &'a str,
-        character_id: &'a str,
-        page: usize,
-    },
-    GetDestinyActivityDefinition {
-        activity_hash: usize,
-    },
-}
-
-#[derive(Deserialize)]
-#[serde(rename_all = "PascalCase")]
-struct BungieResponseStatus {
-    error_code: isize,
-    message: String,
-    throttle_seconds: isize,
-    response: Option<Value>,
-}
-
 #[derive(Debug)]
-pub enum BungieResponseError {
-    ParseFail {
-        status_code: u16,
-    },
-    BungieError {
-        message: String,
-        error_code: isize,
-        throttle_seconds: isize,
-    },
-    ResponseMissing,
-    NetworkError(anyhow::Error),
+pub enum ApiError {
+    ResponseDeserializeError(serde_json::Error),
+    ResponseError(BungieResponseError),
 }
 
-impl Display for BungieResponseError {
+impl Display for ApiError {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
-            BungieResponseError::ParseFail { status_code } => {
-                write!(f, "Failed to parse response (code {status_code})")
+            ApiError::ResponseDeserializeError(e) => {
+                write!(f, "Failed to parse response object: {}", e)
             }
-            BungieResponseError::BungieError {
-                message,
-                error_code,
-                throttle_seconds,
-            } => write!(
-                f,
-                "{message} ({error_code}){}",
-                if *throttle_seconds > 0 {
-                    format!(", throttled! ({}s)", throttle_seconds)
-                } else {
-                    "".to_string()
-                }
-            ),
-            BungieResponseError::ResponseMissing => f.write_str("Response object missing"),
-            BungieResponseError::NetworkError(e) => write!(f, "{}", e),
+            ApiError::ResponseError(e) => e.fmt(f),
         }
     }
 }
 
-impl Error for BungieResponseError {}
+impl Error for ApiError {}
 
-fn api_request(path: &str, method: Method) -> RequestBuilder {
-    Client::new()
-        .request(method, format!("{API_PATH}{path}"))
-        .header("X-API-Key", API_KEY)
-}
+#[async_trait]
+pub trait Source<K: Hash + Eq + Clone + Send, V: Clone + Send> {
+    async fn get(&mut self, key: K) -> Result<V, ApiError>
+    where
+        K: 'async_trait,
+    {
+        let cache = self.cache();
 
-pub async fn make_request(req: BungieRequest<'_>) -> Result<Value, BungieResponseError> {
-    let builder = match req {
-        BungieRequest::SearchDestinyPlayerByBungieName { display_name, display_name_code } => api_request(
-            "/Destiny2/SearchDestinyPlayerByBungieName/All",
-            Method::POST,
-        ).body(json!({"displayName": display_name, "displayNameCode": display_name_code}).to_string()),
-        BungieRequest::GetProfile { membership_type, membership_id, component } =>  {
-            api_request(&format!("/Destiny2/{membership_type}/Profile/{membership_id}?components={component}"), Method::GET)
+        if cache.contains_key(&key) {
+            return Ok(cache.get(&key).unwrap().clone());
         }
-        BungieRequest::GetActivityHistory { membership_type, membership_id, character_id, page } =>  {
-            api_request(&format!("/Destiny2/{membership_type}/Account/{membership_id}/Character/{character_id}/Stats/Activities?mode=4&count=20&page={page}"), Method::GET)
-        }
-        BungieRequest::GetDestinyActivityDefinition { activity_hash } => api_request(&format!("/Destiny2/Manifest/DestinyActivityDefinition/{activity_hash}"), Method::GET),
-    };
 
-    let resp = builder
-        .send()
-        .await
-        .map_err(|e| BungieResponseError::NetworkError(e.into()))?;
+        let value_fut = Self::get_value(key.clone());
 
-    let status_code = resp.status().as_u16();
+        let value = value_fut.await?;
 
-    let text = resp
-        .text()
-        .await
-        .map_err(|e| BungieResponseError::NetworkError(e.into()))?;
+        cache.insert(key, value.clone());
 
-    let status: BungieResponseStatus = match serde_json::from_str(&text) {
-        Ok(s) => s,
-        Err(_) => return Err(BungieResponseError::ParseFail { status_code }.into()),
-    };
-
-    if status.error_code != 1 {
-        return Err(BungieResponseError::BungieError {
-            message: status.message,
-            error_code: status.error_code,
-            throttle_seconds: status.throttle_seconds,
-        }
-        .into());
+        Ok(value)
     }
 
-    Ok(status
-        .response
-        .ok_or(BungieResponseError::ResponseMissing)?)
+    async fn get_value(key: K) -> Result<V, ApiError>;
+
+    fn cache(&mut self) -> &mut HashMap<K, V>;
+}
+
+#[derive(Default)]
+pub struct ProfileInfoSource {
+    cache: HashMap<Profile, ProfileInfo>,
+}
+
+impl ProfileInfoSource {
+    pub fn set_characters(&mut self, profile: &Profile, characters: Vec<String>) {
+        if let Some(p) = self.cache.get_mut(profile) {
+            p.character_ids = characters;
+        }
+    }
+}
+
+#[async_trait]
+impl Source<Profile, ProfileInfo> for ProfileInfoSource {
+    async fn get_value(profile: Profile) -> Result<ProfileInfo, ApiError> {
+        let res_val = make_request(BungieRequest::GetProfile {
+            membership_type: profile.account_platform,
+            membership_id: &profile.account_id,
+            component: 100,
+        })
+        .await
+        .map_err(|e| ApiError::ResponseError(e))?;
+
+        serde_json::from_value(res_val).map_err(|e| ApiError::ResponseDeserializeError(e))
+    }
+
+    fn cache(&mut self) -> &mut HashMap<Profile, ProfileInfo> {
+        &mut self.cache
+    }
+}
+
+#[derive(Default)]
+pub struct ActivityInfoSource {
+    cache: HashMap<usize, ActivityInfo>,
+}
+
+#[async_trait]
+impl Source<usize, ActivityInfo> for ActivityInfoSource {
+    async fn get_value(activity_hash: usize) -> Result<ActivityInfo, ApiError> {
+        let res_val = make_request(BungieRequest::GetDestinyActivityDefinition { activity_hash })
+            .await
+            .map_err(|e| ApiError::ResponseError(e))?;
+
+        serde_json::from_value(res_val).map_err(|e| ApiError::ResponseDeserializeError(e))
+    }
+
+    fn cache(&mut self) -> &mut HashMap<usize, ActivityInfo> {
+        &mut self.cache
+    }
+}
+
+#[derive(Default)]
+pub struct Api {
+    pub profile_info_source: Mutex<ProfileInfoSource>,
+    pub activity_info_source: Mutex<ActivityInfoSource>,
+}
+
+impl Api {
+    pub async fn search_profile(
+        display_name: &String,
+        display_name_code: usize,
+    ) -> Result<Vec<BungieProfile>, ApiError> {
+        let res_val = make_request(BungieRequest::SearchDestinyPlayerByBungieName {
+            display_name: display_name,
+            display_name_code,
+        })
+        .await
+        .map_err(|e| ApiError::ResponseError(e))?;
+
+        serde_json::from_value(res_val).map_err(|e| ApiError::ResponseDeserializeError(e))
+    }
+
+    pub async fn get_profile_activities(
+        profile: &Profile,
+    ) -> Result<ProfileCurrentActivities, ApiError> {
+        let res_val = make_request(BungieRequest::GetProfile {
+            membership_type: profile.account_platform,
+            membership_id: &profile.account_id,
+            component: 204,
+        })
+        .await
+        .map_err(|e| ApiError::ResponseError(e))?;
+
+        serde_json::from_value(res_val).map_err(|e| ApiError::ResponseDeserializeError(e))
+    }
+
+    pub async fn get_activity_history(
+        profile: &Profile,
+        character_id: &String,
+        page: usize,
+    ) -> Result<CharacterActivityHistory, ApiError> {
+        let res_val = make_request(BungieRequest::GetActivityHistory {
+            membership_type: profile.account_platform,
+            membership_id: &profile.account_id,
+            character_id: character_id,
+            page,
+        })
+        .await
+        .map_err(|e| ApiError::ResponseError(e))?;
+
+        serde_json::from_value(res_val).map_err(|e| ApiError::ResponseDeserializeError(e))
+    }
 }

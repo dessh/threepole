@@ -1,5 +1,10 @@
-type ThreepoleEvent<T> = {
+type TauriEvent<T> = {
     payload: T
 };
 
-export type { ThreepoleEvent };
+type RustResult<T> = {
+    Ok: T | null,
+    Err: string | null,
+}
+
+export type { TauriEvent, RustResult };

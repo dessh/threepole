@@ -8,10 +8,10 @@ use anyhow::{anyhow, Result};
 use directories::BaseDirs;
 use serde::{de::DeserializeOwned, Serialize};
 
-use self::{prefs::Preferences, profiles::Profiles};
+use self::{preferences::Preferences, profiles::Profiles};
 use crate::consts::APP_NAME;
 
-pub mod prefs;
+pub mod preferences;
 pub mod profiles;
 
 pub struct ConfigManager {
