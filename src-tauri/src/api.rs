@@ -40,8 +40,8 @@ impl Display for ApiError {
 impl Error for ApiError {}
 
 #[async_trait]
-pub trait Source<K: Hash + Eq + Clone + Send, V: Clone + Send> {
-    async fn get(&mut self, key: K) -> Result<V, ApiError>
+pub trait Source<K: Hash + Eq + Clone + Send + Sync, V: Clone + Send> {
+    async fn get(&mut self, key: &K) -> Result<V, ApiError>
     where
         K: 'async_trait,
     {
@@ -55,7 +55,7 @@ pub trait Source<K: Hash + Eq + Clone + Send, V: Clone + Send> {
 
         let value = value_fut.await?;
 
-        cache.insert(key, value.clone());
+        cache.insert(key.clone(), value.clone());
 
         Ok(value)
     }

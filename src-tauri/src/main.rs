@@ -84,7 +84,7 @@ async fn get_profile_info(profile: Profile, api: State<'_, Api>) -> Result<Profi
         .profile_info_source
         .lock()
         .await
-        .get(profile)
+        .get(&profile)
         .await
         .map_err(|e| e.to_string())?)
 }

@@ -15,6 +15,7 @@ use crate::{
         responses::{ActivityInfo, CompletedActivity, LatestCharacterActivity},
         Api, ApiError, Source,
     },
+    config::profiles::Profile,
     consts::API_POLL_INTERVAL,
     ConfigContainer,
 };
@@ -55,12 +56,29 @@ impl PlayerDataPoller {
         send_blank_update(&app_handle);
 
         self.task_handle = Some(async_runtime::spawn(async move {
+            let profile_opt = {
+                let container = app_handle.state::<ConfigContainer>();
+                let lock = container.0.lock().await;
+                lock.get_profiles().selected_profile.clone()
+            };
+
+            let profile = match profile_opt {
+                Some(p) => p,
+                None => {
+                    send_data_update(&app_handle, Err("No profile set".to_string()));
+                    return;
+                }
+            };
+
             {
                 let mut lock = playerdata_clone.lock().await;
 
-                if let Err(e) = update_current(&app_handle, &mut lock.current_activity).await {
+                if let Err(e) =
+                    update_current(&app_handle, &mut lock.current_activity, &profile).await
+                {
                     send_data_update(&app_handle, Err(e.to_string()));
-                } else if let Err(e) = update_history(&app_handle, &mut lock.activity_history).await
+                } else if let Err(e) =
+                    update_history(&app_handle, &mut lock.activity_history, &profile).await
                 {
                     send_data_update(&app_handle, Err(e.to_string()));
                 } else {
@@ -77,10 +95,10 @@ impl PlayerDataPoller {
                     let mut lock = playerdata_clone.lock().await;
 
                     let res = if count < 5 {
-                        update_current(&app_handle, &mut lock.current_activity).await
+                        update_current(&app_handle, &mut lock.current_activity, &profile).await
                     } else {
                         count = 0;
-                        update_history(&app_handle, &mut lock.activity_history).await
+                        update_history(&app_handle, &mut lock.activity_history, &profile).await
                     };
 
                     match res {
@@ -123,18 +141,9 @@ fn send_data_update(handle: &AppHandle, data: Result<PlayerData, String>) {
 async fn update_current(
     handle: &AppHandle,
     last_activity: &mut Option<CurrentActivity>,
+    profile: &Profile,
 ) -> Result<bool> {
-    let profile = {
-        let container = handle.state::<ConfigContainer>();
-        let lock = container.0.lock().await;
-
-        match &lock.get_profiles().selected_profile {
-            Some(p) => p.clone(),
-            None => bail!("No profile set"),
-        }
-    };
-
-    let current_activities = Api::get_profile_activities(&profile).await?;
+    let current_activities = Api::get_profile_activities(profile).await?;
 
     let activities = match current_activities.activities {
         Some(a) => a,
@@ -161,7 +170,7 @@ async fn update_current(
     api.profile_info_source
         .lock()
         .await
-        .set_characters(&profile, characters);
+        .set_characters(profile, characters);
 
     if latest_activity.current_activity_hash == 0 {
         *last_activity = None;
@@ -173,7 +182,7 @@ async fn update_current(
             .activity_info_source
             .lock()
             .await
-            .get(latest_activity.current_activity_hash)
+            .get(&latest_activity.current_activity_hash)
             .await;
 
         match activity {
@@ -199,25 +208,11 @@ async fn update_current(
 async fn update_history(
     handle: &AppHandle,
     last_history: &mut Vec<CompletedActivity>,
+    profile: &Profile,
 ) -> Result<bool> {
-    let profile = {
-        let container = handle.state::<ConfigContainer>();
-        let lock = container.0.lock().await;
-
-        match &lock.get_profiles().selected_profile {
-            Some(p) => p.clone(),
-            None => bail!("No profile set"),
-        }
-    };
-
     let api = handle.state::<Api>();
 
-    let profile_info = api
-        .profile_info_source
-        .lock()
-        .await
-        .get(profile.clone())
-        .await?;
+    let profile_info = api.profile_info_source.lock().await.get(profile).await?;
 
     let mut past_activities: Vec<CompletedActivity> = Vec::new();
 
@@ -235,7 +230,7 @@ async fn update_history(
         let mut page = 0;
 
         loop {
-            let history = Api::get_activity_history(&profile, character_id, page).await?;
+            let history = Api::get_activity_history(profile, character_id, page).await?;
 
             let activities = match history.activities {
                 Some(a) => a,
