@@ -18,7 +18,7 @@ function showQueuedPopups() {
         popup.classList.add("popup");
 
         let glyph = document.createElement("img");
-        glyph.src = "/glyph_shadow.png";
+        glyph.src = "/glyph.png";
 
         let contents = document.createElement("div");
 
