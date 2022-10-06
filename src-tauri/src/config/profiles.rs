@@ -1,16 +1,34 @@
-use std::collections::HashSet;
-use std::hash::Hash;
-
-use serde::{Deserialize, Serialize};
+use itertools::Itertools;
+use serde::{Deserialize, Deserializer, Serialize};
 
 use super::ConfigFile;
 
-#[derive(Serialize, Deserialize, Default, Clone)]
+#[derive(Serialize, Default, Clone)]
 #[serde(rename_all = "camelCase")]
 #[serde(default)]
 pub struct Profiles {
-    pub saved_profiles: HashSet<Profile>,
+    pub saved_profiles: Vec<Profile>,
     pub selected_profile: Option<Profile>,
+}
+
+impl<'de> Deserialize<'de> for Profiles {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        #[derive(Deserialize)]
+        #[serde(rename_all = "camelCase")]
+        struct _Profiles {
+            saved_profiles: Vec<Profile>,
+            selected_profile: Option<Profile>,
+        }
+
+        let profiles = _Profiles::deserialize(deserializer)?;
+        Ok(Self {
+            saved_profiles: profiles.saved_profiles.into_iter().unique().collect(),
+            selected_profile: profiles.selected_profile,
+        })
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq, Hash)]
