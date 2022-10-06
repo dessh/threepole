@@ -1,5 +1,6 @@
 import { appWindow } from "@tauri-apps/api/window";
 import { shown } from "./overlay";
+import "./popups.css";
 
 type Popup = {
     title: string,
