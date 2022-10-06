@@ -45,7 +45,7 @@ async function init() {
         }
     });
 
-    appWindow.listen("update_preferences", (p: TauriEvent<Preferences>) => applyPreferences(p.payload));
+    appWindow.listen("preferences_update", (p: TauriEvent<Preferences>) => applyPreferences(p.payload));
 
     appWindow.listen("playerdata_update", (e: TauriEvent<RustResult<PlayerData> | null>) => {
         // if the initial refresh returned null (meaning refresh was in prog), and this returns err, overlay won't get latest data till next successful refresh
