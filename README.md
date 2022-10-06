@@ -1,5 +1,5 @@
 <div align="center">
-    <img src="./src-tauri/icons/256x256.png" width="128" height="128" style="display: block; margin: 0 auto"/>
+    <img src="./src-tauri/icons/icon.png" width="128" height="128" style="display: block; margin: 0 auto"/>
     <h1>threepole</h1>
 </div>
 
