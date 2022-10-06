@@ -39,7 +39,7 @@ struct OverlayPollerHandle(Mutex<Option<JoinHandle<()>>>);
 
 #[tauri::command]
 async fn get_preferences(container: State<'_, ConfigContainer>) -> Result<Preferences, ()> {
-    Ok(container.0.lock().await.get_prefs().clone())
+    Ok(container.0.lock().await.get_preferences().clone())
 }
 
 #[tauri::command]

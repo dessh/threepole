@@ -15,29 +15,29 @@ pub mod preferences;
 pub mod profiles;
 
 pub struct ConfigManager {
-    prefs: Preferences,
+    preferences: Preferences,
     profiles: Profiles,
 }
 
 impl ConfigManager {
     pub fn load() -> Result<Self> {
         Ok(Self {
-            prefs: Preferences::load()?,
+            preferences: Preferences::load()?,
             profiles: Profiles::load()?,
         })
     }
 
-    pub fn get_prefs(&self) -> &Preferences {
-        &self.prefs
+    pub fn get_preferences(&self) -> &Preferences {
+        &self.preferences
     }
 
     pub fn get_profiles(&self) -> &Profiles {
         &self.profiles
     }
 
-    pub fn set_preferences(&mut self, prefs: Preferences) -> Result<()> {
-        self.prefs = prefs;
-        self.prefs.write()
+    pub fn set_preferences(&mut self, preferences: Preferences) -> Result<()> {
+        self.preferences = preferences;
+        self.preferences.write()
     }
 
     pub fn set_profiles(&mut self, profiles: Profiles) -> Result<()> {
