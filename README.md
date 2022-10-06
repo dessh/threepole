@@ -1,4 +1,6 @@
-<img src="./assets/banner.png" style="display: block; margin: 0 auto; margin-bottom: 32px;" alt="threepole banner"/>
+<div align="center">
+    <img src="./assets/banner.png" height="256px" alt="threepole banner"/>
+</div>
 
 ---
 
