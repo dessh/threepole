@@ -305,12 +305,13 @@
     }
 
     .search {
+        position: relative;
         text-align: center;
     }
 
     .search input {
         font-family: "Inter Tight";
-        width: 60vw;
+        width: 60%;
         height: 40px;
         font-size: 20px;
         color: #fff;
@@ -345,8 +346,8 @@
 
     .placeholder {
         position: absolute;
-        left: calc(40vw / 2);
-        width: calc(60vw - 40px);
+        left: calc(40% / 2);
+        width: calc(60% - 40px);
         height: 40px;
         color: #aaa;
         font-size: 20px;
@@ -362,7 +363,7 @@
 
     .search button {
         position: absolute;
-        left: 70vw;
+        left: 70%;
         width: 40px;
         height: 40px;
         vertical-align: middle;
@@ -394,7 +395,7 @@
     }
 
     .padded {
-        width: 60vw;
+        width: 60%;
         margin-left: auto;
         margin-right: auto;
     }
