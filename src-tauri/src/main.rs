@@ -151,7 +151,6 @@ fn create_profile_window(handle: &AppHandle) -> Result<(), tauri::Error> {
         WindowUrl::App("./src/window/window.html#profile".into()),
     )
     .title(APP_NAME)
-    .transparent(true)
     .decorations(false)
     .inner_size(400.0, 500.0)
     .resizable(false)
@@ -169,11 +168,27 @@ fn create_preferences_window(handle: &AppHandle) -> Result<(), tauri::Error> {
         WindowUrl::App("./src/window/window.html#preferences".into()),
     )
     .title(APP_NAME)
-    .transparent(true)
     .decorations(false)
     .inner_size(400.0, 500.0)
     .resizable(false)
     .always_on_top(true)
+    .visible(false)
+    .build()?;
+
+    Ok(())
+}
+
+fn create_details_window(handle: &AppHandle) -> Result<(), tauri::Error> {
+    WindowBuilder::new(
+        handle,
+        "details",
+        WindowUrl::App("./src/window/window.html#details".into()),
+    )
+    .title(APP_NAME)
+    .decorations(false)
+    .inner_size(800.0, 600.0)
+    .resizable(true)
+    .always_on_top(false)
     .visible(false)
     .build()?;
 
@@ -211,6 +226,12 @@ fn main() -> anyhow::Result<()> {
                     .unwrap(),
                     _ => (),
                 }
+            } else if let SystemTrayEvent::LeftClick { .. } = event {
+                match app.get_window("details") {
+                    Some(w) => w.set_focus(),
+                    None => create_details_window(app),
+                }
+                .unwrap()
             }
         })
         .invoke_handler(tauri::generate_handler![
