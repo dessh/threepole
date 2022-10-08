@@ -243,9 +243,7 @@ async fn update_history(
                 if activity.period < cutoff {
                     includes_past_cutoff = true;
                 } else {
-                    if activity.completed {
-                        past_activities.push(activity);
-                    }
+                    past_activities.push(activity);
                 }
             }
 
