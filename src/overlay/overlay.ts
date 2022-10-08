@@ -26,7 +26,7 @@ let timerInterval;
 async function init() {
     appWindow.listen("show", () => {
         if (!timerInterval) {
-            timerInterval = setInterval(timerTick, 1000 / 30);
+            timerInterval = setInterval(() => requestAnimationFrame(timerTick), 1000 / 30);
         }
 
         appWindow.show();
