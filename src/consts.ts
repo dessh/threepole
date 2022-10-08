@@ -1,3 +1,4 @@
 const RAID_ACTIVITY_TYPE = 2043403989;
+const BUNGIE_BASE_PATH = "https://bungie.net";
 
-export { RAID_ACTIVITY_TYPE };
+export { RAID_ACTIVITY_TYPE, BUNGIE_BASE_PATH };
