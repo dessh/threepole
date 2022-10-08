@@ -4,7 +4,7 @@
 )]
 
 use api::{
-    responses::{BungieProfile, ProfileInfo},
+    responses::{ActivityInfo, BungieProfile, ProfileInfo},
     Api, Source,
 };
 use config::{
@@ -85,6 +85,20 @@ async fn get_profile_info(profile: Profile, api: State<'_, Api>) -> Result<Profi
         .lock()
         .await
         .get(&profile)
+        .await
+        .map_err(|e| e.to_string())?)
+}
+
+#[tauri::command]
+async fn get_activity_info(
+    activity_hash: usize,
+    api: State<'_, Api>,
+) -> Result<ActivityInfo, String> {
+    Ok(api
+        .activity_info_source
+        .lock()
+        .await
+        .get(&activity_hash)
         .await
         .map_err(|e| e.to_string())?)
 }
@@ -240,6 +254,7 @@ fn main() -> anyhow::Result<()> {
             get_profiles,
             set_profiles,
             get_profile_info,
+            get_activity_info,
             search_profile,
             get_playerdata,
         ])
