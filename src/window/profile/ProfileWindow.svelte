@@ -1,8 +1,8 @@
 <script lang="ts">
     import { invoke } from "@tauri-apps/api/tauri";
     import { appWindow } from "@tauri-apps/api/window";
-    import LineButton from "../svelte/LineButton.svelte";
-    import Window from "../svelte/Window.svelte";
+    import LineButton from "../widgets/LineButton.svelte";
+    import Window from "../Window.svelte";
     import Loader from "./LoaderWidget.svelte";
     import ProfileWidget from "./ProfileWidget.svelte";
     import ProfileAddWidget from "./ProfileAddWidget.svelte";
@@ -11,7 +11,7 @@
         Profiles,
         ProfileInfo,
         Profile,
-    } from "./types";
+    } from "../../types";
 
     type State = {
         addPage: boolean;

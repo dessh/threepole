@@ -103,7 +103,7 @@ async fn create_overlay(handle: AppHandle) -> Result<(), tauri::Error> {
     let overlay = WindowBuilder::new(
         &handle,
         "overlay",
-        WindowUrl::App("./src/overlay.html".into()),
+        WindowUrl::App("./src/overlay/overlay.html".into()),
     )
     .title(APP_NAME)
     .transparent(true)
@@ -148,7 +148,7 @@ fn create_profile_window(handle: &AppHandle) -> Result<(), tauri::Error> {
     WindowBuilder::new(
         handle,
         "profile",
-        WindowUrl::App("./src/profile.html".into()),
+        WindowUrl::App("./src/window/window.html#profile".into()),
     )
     .title(APP_NAME)
     .transparent(true)
@@ -166,7 +166,7 @@ fn create_preferences_window(handle: &AppHandle) -> Result<(), tauri::Error> {
     WindowBuilder::new(
         handle,
         "preferences",
-        WindowUrl::App("./src/preferences.html".into()),
+        WindowUrl::App("./src/window/window.html#preferences".into()),
     )
     .title(APP_NAME)
     .transparent(true)
