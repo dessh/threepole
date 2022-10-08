@@ -16,7 +16,7 @@ const counterElem = document.querySelector<HTMLElement>("#counter")!;
 const dailyElem = document.querySelector<HTMLElement>("#daily")!;
 
 let currentActivity: CurrentActivity;
-let lastRaidId = null;
+let lastRaidId;
 let doneInitialRefresh = false;
 
 let shown = false;
@@ -84,13 +84,22 @@ function refresh(playerData: PlayerData | null) {
         timerElem.classList.add("hidden");
     }
 
-    dailyElem.innerText = String(playerData.activityHistory.length);
-
-    if (doneInitialRefresh && playerData.activityHistory[0] && lastRaidId != playerData.activityHistory[0].instanceId && prefs.displayClearNotifications) {
-        createPopup({ title: "Raid clear result", subtext: `API Time: <strong>${playerData.activityHistory[0].activityDuration}</strong>` });
+    let clearCount = 0;
+    for (let activity of playerData.activityHistory) {
+        if (activity.completed) {
+            clearCount++;
+        }
     }
 
-    lastRaidId = playerData.activityHistory[0]?.instanceId;
+    dailyElem.innerText = String(clearCount);
+
+    let latestRaid = playerData.activityHistory[0];
+
+    if (doneInitialRefresh && latestRaid && lastRaidId != latestRaid.instanceId && latestRaid.completed && prefs.displayClearNotifications) {
+        createPopup({ title: "Raid clear result", subtext: `API Time: <strong>${latestRaid.activityDuration}</strong>` });
+    }
+
+    lastRaidId = latestRaid?.instanceId;
 
     if (!doneInitialRefresh) {
         showWelcomePopup();
