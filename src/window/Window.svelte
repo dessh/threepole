@@ -59,6 +59,7 @@
         width: 32px;
         height: 28px;
         transition: background-color 0.1s;
+        cursor: default;
     }
 
     .titlebar button svg {
