@@ -1,10 +1,10 @@
 <script lang="ts">
     import { invoke } from "@tauri-apps/api/tauri";
     import { appWindow } from "@tauri-apps/api/window";
-    import LineButton from "../svelte/LineButton.svelte";
-    import Window from "../svelte/Window.svelte";
+    import LineButton from "../widgets/LineButton.svelte";
+    import Window from "../Window.svelte";
     import StyledCheckbox from "./StyledCheckbox.svelte";
-    import type { Preferences } from "./types";
+    import type { Preferences } from "../../types";
 
     let preferences: Preferences;
     let error: string;

@@ -3,10 +3,7 @@ import "./overlay.css"
 import { appWindow } from "@tauri-apps/api/window";
 import { invoke } from "@tauri-apps/api/tauri";
 import createPopup from "./popups";
-import type { Preferences } from "../preferences/types";
-import type { RustResult, TauriEvent } from "../types";
-import type { Profiles, ProfileInfo } from "../profile/types";
-import type { CurrentActivity, PlayerData } from "./types";
+import type { RustResult, TauriEvent, Profiles, ProfileInfo, Preferences, PlayerData, CurrentActivity } from "../types";
 import { RAID_ACTIVITY_TYPE } from "../consts";
 
 const loaderElem = document.querySelector<HTMLElement>("#loader")!;

@@ -1,5 +1,5 @@
 <script lang="ts">
-    import type { BungieProfile } from "./types";
+    import type { BungieProfile } from "../../types";
     import iconPaths from "./platforms/platforms";
 
     export let profile: BungieProfile;
