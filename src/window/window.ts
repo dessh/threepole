@@ -1,6 +1,7 @@
 import "../global.css";
 import ProfileWindow from "./profile/ProfileWindow.svelte";
 import PreferencesWindow from "./preferences/PreferencesWindow.svelte";
+import DetailsWindow from "./details/DetailsWindow.svelte";
 import { appWindow } from "@tauri-apps/api/window";
 
 const app = getWindowType();
@@ -14,6 +15,10 @@ function getWindowType() {
             });
         case "profile":
             return new ProfileWindow({
+                target: document.querySelector("body")
+            });
+        case "details":
+            return new DetailsWindow({
                 target: document.querySelector("body")
             });
         default:

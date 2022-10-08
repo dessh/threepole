@@ -5,6 +5,7 @@ import { invoke } from "@tauri-apps/api/tauri";
 import createPopup from "./popups";
 import type { RustResult, TauriEvent, Profiles, ProfileInfo, Preferences, PlayerData, CurrentActivity } from "../types";
 import { RAID_ACTIVITY_TYPE } from "../consts";
+import { formatMillis, formatTime } from "../timer";
 
 const loaderElem = document.querySelector<HTMLElement>("#loader")!;
 const widgetElem = document.querySelector<HTMLElement>("#widget")!;
@@ -136,22 +137,6 @@ function timerTick() {
     let millis = Number(new Date()) - Number(new Date(currentActivity.startDate));
     timeElem.innerHTML = formatTime(millis);
     msElem.innerHTML = formatMillis(millis);
-}
-
-function formatTime(millis: number): string {
-    let seconds = Math.floor(millis / 1000);
-
-    let minutes = Math.floor(seconds / 60);
-    seconds = seconds - (minutes * 60);
-
-    let hours = Math.floor(minutes / 60);
-    minutes = minutes - (hours * 60);
-
-    return (hours > 0 ? (hours + ":") : "") + String(minutes).padStart(2, "0") + ":" + String(seconds).padStart(2, "0");
-}
-
-function formatMillis(millis: number): string {
-    return ":" + String(millis % 1000).padStart(3, "0").substring(0, 2);
 }
 
 init();
