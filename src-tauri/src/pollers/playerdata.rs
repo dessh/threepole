@@ -160,7 +160,7 @@ async fn update_current(
 
     if let Some(a) = last_activity {
         if a.start_date > latest_activity.date_activity_started {
-            // >= ?? (depends on if activity can be wrong but date is changed)
+            // not >=, because it's possible for API to respond with new date but incorrect activity
             return Ok(false);
         }
     }
