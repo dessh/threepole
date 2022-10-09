@@ -5,7 +5,7 @@ import { invoke } from "@tauri-apps/api/tauri";
 import createPopup from "./popups";
 import type { TauriEvent, Profiles, ProfileInfo, Preferences, PlayerData, CurrentActivity, PlayerDataStatus } from "../types";
 import { RAID_ACTIVITY_TYPE } from "../consts";
-import { formatMillis, formatTime } from "../timer";
+import { countClears, formatMillis, formatTime } from "../util";
 
 const loaderElem = document.querySelector<HTMLElement>("#loader")!;
 const widgetElem = document.querySelector<HTMLElement>("#widget")!;
@@ -78,14 +78,8 @@ function refresh(playerDataStatus: PlayerDataStatus) {
         timerElem.classList.add("hidden");
     }
 
-    let clearCount = 0;
-    for (let activity of playerData.activityHistory) {
-        if (activity.completed) {
-            clearCount++;
-        }
-    }
 
-    dailyElem.innerText = String(clearCount);
+    dailyElem.innerText = String(countClears(playerData.activityHistory));
 
     let latestRaid = playerData.activityHistory[0];
 
