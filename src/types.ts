@@ -57,6 +57,7 @@ type CompletedActivity = {
     instanceId: string;
     completed: boolean;
     activityDuration: string;
+    activityDurationSeconds: number;
     activityHash: number;
 }
 
