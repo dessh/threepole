@@ -149,9 +149,10 @@ pub struct CharacterActivityHistory {
 pub struct CompletedActivity {
     pub period: DateTime<Utc>,
     pub instance_id: String,
+    pub activity_hash: usize,
     pub completed: bool,
     pub activity_duration: String,
-    pub activity_hash: usize,
+    pub activity_duration_seconds: usize,
 }
 
 impl PartialOrd for CompletedActivity {
@@ -219,6 +220,8 @@ impl<'de> Deserialize<'de> for CompletedActivity {
                 .activity_duration_seconds
                 .basic
                 .display_value,
+            activity_duration_seconds: activity.values.activity_duration_seconds.basic.value
+                as usize,
         })
     }
 }
