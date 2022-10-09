@@ -1,3 +1,5 @@
+import type { CompletedActivity } from "./types";
+
 function formatTime(millis: number): string {
     let seconds = Math.floor(millis / 1000);
 
@@ -14,4 +16,15 @@ function formatMillis(millis: number): string {
     return ":" + String(millis % 1000).padStart(3, "0").substring(0, 2);
 }
 
-export { formatTime, formatMillis };
+function countClears(activityHistory: CompletedActivity[]): number {
+    let clearCount = 0;
+    for (let activity of activityHistory) {
+        if (activity.completed) {
+            clearCount++;
+        }
+    }
+
+    return clearCount;
+}
+
+export { formatTime, formatMillis, countClears };
