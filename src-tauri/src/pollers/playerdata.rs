@@ -23,7 +23,7 @@ use crate::{
 #[derive(Serialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct PlayerData {
-    current_activity: Option<CurrentActivity>,
+    current_activity: CurrentActivity,
     activity_history: Vec<CompletedActivity>,
     profile_info: ProfileInfo,
 }
@@ -39,7 +39,7 @@ pub struct PlayerDataStatus {
 #[serde(rename_all = "camelCase")]
 struct CurrentActivity {
     start_date: DateTime<Utc>,
-    activity_info: ActivityInfo,
+    activity_info: Option<ActivityInfo>,
 }
 
 #[derive(Default)]
@@ -98,18 +98,14 @@ impl PlayerDataPoller {
                 }
             };
 
-            let mut playerdata = PlayerData {
-                current_activity: None,
-                activity_history: Vec::new(),
-                profile_info,
+            let mut current_activity = CurrentActivity {
+                start_date: DateTime::<Utc>::MIN_UTC,
+                activity_info: None,
             };
+            let mut activity_history = Vec::new();
 
-            let res = match update_current(&app_handle, &mut playerdata.current_activity, &profile)
-                .await
-            {
-                Ok(_) => {
-                    update_history(&app_handle, &mut playerdata.activity_history, &profile).await
-                }
+            let res = match update_current(&app_handle, &mut current_activity, &profile).await {
+                Ok(_) => update_history(&app_handle, &mut activity_history, &profile).await,
                 Err(e) => Err(e),
             };
 
@@ -117,6 +113,12 @@ impl PlayerDataPoller {
                 let mut lock = playerdata_clone.lock().await;
                 match res {
                     Ok(_) => {
+                        let playerdata = PlayerData {
+                            current_activity: current_activity,
+                            activity_history,
+                            profile_info,
+                        };
+
                         lock.last_update = Some(playerdata);
                     }
                     Err(e) => {
@@ -140,6 +142,9 @@ impl PlayerDataPoller {
                     count = 0;
                     update_history(&app_handle, &mut last_update.activity_history, &profile).await
                 };
+
+                // The boolean return value of update_* functions represents whether or not
+                // the last_update should be resent to the overlay / details
 
                 match res {
                     Ok(true) => {
@@ -184,7 +189,7 @@ fn send_data_update(handle: &AppHandle, data: PlayerDataStatus) {
 
 async fn update_current(
     handle: &AppHandle,
-    last_activity: &mut Option<CurrentActivity>,
+    last_activity: &mut CurrentActivity,
     profile: &Profile,
 ) -> Result<bool> {
     let current_activities = Api::get_profile_activities(profile).await?;
@@ -202,11 +207,24 @@ async fn update_current(
         .max()
         .ok_or(anyhow!("No character data for profile"))?;
 
-    if let Some(a) = last_activity {
-        if a.start_date > latest_activity.date_activity_started {
-            // not >=, because it's possible for API to respond with new date but incorrect activity
-            return Ok(false);
+    match last_activity
+        .start_date
+        .cmp(&latest_activity.date_activity_started)
+    {
+        std::cmp::Ordering::Less => {
+            last_activity.start_date = latest_activity.date_activity_started
         }
+        std::cmp::Ordering::Equal => {
+            if last_activity.activity_info.is_none() {
+                return Ok(false);
+                // Return here, as once activity_info becomes None
+                // for a given activity start_date, it should
+                // stay None until start_date changes again
+            }
+        }
+        std::cmp::Ordering::Greater => return Ok(false),
+        // Only return if our last-fetched activity is more recent,
+        // as current_hash can change without start_date changing
     }
 
     let api = handle.state::<Api>();
@@ -217,7 +235,7 @@ async fn update_current(
         .set_characters(profile, characters);
 
     if latest_activity.current_activity_hash == 0 {
-        *last_activity = None;
+        last_activity.activity_info = None;
         return Ok(true);
     }
 
@@ -232,19 +250,19 @@ async fn update_current(
         match activity {
             Ok(a) => a,
             Err(ApiError::ResponseError(BungieResponseError::ResponseMissing)) => {
-                *last_activity = None;
+                last_activity.activity_info = None;
                 return Ok(true);
             }
             Err(e) => return Err(e.into()),
         }
     };
 
-    let current_activity = CurrentActivity {
-        start_date: latest_activity.date_activity_started,
-        activity_info: current_activity_info,
-    };
+    if current_activity_info.name.is_empty() {
+        last_activity.activity_info = None;
+        return Ok(true);
+    }
 
-    *last_activity = Some(current_activity);
+    last_activity.activity_info = Some(current_activity_info);
 
     Ok(true)
 }
@@ -301,8 +319,7 @@ async fn update_history(
 
     if let Some(last) = last_history.into_iter().max() {
         if let Some(new) = (&mut past_activities).into_iter().max() {
-            if last > new {
-                // replace with >=, see current
+            if last >= new {
                 return Ok(false);
             }
         }

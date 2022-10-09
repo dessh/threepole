@@ -36,14 +36,14 @@ type PlayerDataStatus = {
 }
 
 type PlayerData = {
-    currentActivity: CurrentActivity | null;
+    currentActivity: CurrentActivity;
     activityHistory: CompletedActivity[];
     profileInfo: ProfileInfo;
 };
 
 type CurrentActivity = {
     startDate: string;
-    activityInfo: ActivityInfo;
+    activityInfo: ActivityInfo | null;
 };
 
 type ActivityInfo = {
