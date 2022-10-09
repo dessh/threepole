@@ -2,11 +2,6 @@ type TauriEvent<T> = {
     payload: T
 };
 
-type RustResult<T> = {
-    Ok: T | null,
-    Err: string | null,
-}
-
 type BungieProfile = {
     membershipType: number;
     membershipId: string;
@@ -35,9 +30,15 @@ type Preferences = {
     displayMilliseconds: boolean;
 };
 
+type PlayerDataStatus = {
+    lastUpdate: PlayerData | null,
+    error: string | null,
+}
+
 type PlayerData = {
     currentActivity: CurrentActivity | null;
     activityHistory: CompletedActivity[];
+    profileInfo: ProfileInfo;
 };
 
 type CurrentActivity = {
@@ -59,4 +60,4 @@ type CompletedActivity = {
     activityHash: number;
 }
 
-export type { TauriEvent, RustResult, BungieProfile, Profiles, Profile, ProfileInfo, Preferences, PlayerData, CurrentActivity, ActivityInfo, CompletedActivity };
+export type { TauriEvent, BungieProfile, Profiles, Profile, ProfileInfo, Preferences, PlayerDataStatus, PlayerData, CurrentActivity, ActivityInfo, CompletedActivity };

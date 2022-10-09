@@ -3,7 +3,7 @@ import "./overlay.css"
 import { appWindow } from "@tauri-apps/api/window";
 import { invoke } from "@tauri-apps/api/tauri";
 import createPopup from "./popups";
-import type { RustResult, TauriEvent, Profiles, ProfileInfo, Preferences, PlayerData, CurrentActivity } from "../types";
+import type { TauriEvent, Profiles, ProfileInfo, Preferences, PlayerData, CurrentActivity, PlayerDataStatus } from "../types";
 import { RAID_ACTIVITY_TYPE } from "../consts";
 import { formatMillis, formatTime } from "../timer";
 
@@ -44,41 +44,35 @@ async function init() {
     });
 
     appWindow.listen("preferences_update", (p: TauriEvent<Preferences>) => applyPreferences(p.payload));
+    appWindow.listen("playerdata_update", (e: TauriEvent<PlayerDataStatus>) => refresh(e.payload));
 
-    appWindow.listen("playerdata_update", (e: TauriEvent<RustResult<PlayerData> | null>) => {
-        // if the initial refresh returned null (meaning refresh was in prog), and this returns err, overlay won't get latest data till next successful refresh
-        if (e.payload?.Err) {
-            if (!doneInitialRefresh) {
-                createPopup({ title: "Failed to fetch initial stats", subtext: e.payload.Err });
-            }
-            return;
-        }
-
-        refresh(e.payload?.Ok);
-    });
-
-    refresh(await invoke("get_playerdata")); // the initial refresh
-
-    let prefs: Preferences = await invoke("get_preferences");
-    applyPreferences(prefs);
+    refresh(await invoke("get_playerdata"));
+    applyPreferences(await invoke("get_preferences"));
 }
 
-function refresh(playerData: PlayerData | null) {
+function refresh(playerDataStatus: PlayerDataStatus) {
+    let playerData = playerDataStatus.lastUpdate;
+
     if (!playerData) {
         loaderElem.classList.remove("hidden");
         widgetElem.classList.add("hidden");
 
         currentActivity = null;
         doneInitialRefresh = false;
+
+        if (playerDataStatus.error) {
+            createPopup({ title: "Failed to fetch initial stats", subtext: playerDataStatus.error });
+        }
+
         return;
-    } else {
-        loaderElem.classList.add("hidden");
-        widgetElem.classList.remove("hidden");
     }
+
+    loaderElem.classList.add("hidden");
+    widgetElem.classList.remove("hidden");
 
     currentActivity = playerData.currentActivity;
 
-    if (currentActivity && currentActivity.activityInfo.activityTypeHash == RAID_ACTIVITY_TYPE) {
+    if (currentActivity?.activityInfo?.activityTypeHash == RAID_ACTIVITY_TYPE) {
         timerElem.classList.remove("hidden");
     } else {
         timerElem.classList.add("hidden");
@@ -102,24 +96,10 @@ function refresh(playerData: PlayerData | null) {
     lastRaidId = latestRaid?.instanceId;
 
     if (!doneInitialRefresh) {
-        showWelcomePopup();
+        createPopup({ title: `${playerData.profileInfo.displayName}#${playerData.profileInfo.displayTag}`, subtext: "Threepole is active." });
     }
 
     doneInitialRefresh = true;
-}
-
-async function showWelcomePopup() {
-    let profiles: Profiles = await invoke("get_profiles");
-
-    if (!profiles.selectedProfile) {
-        return;
-    }
-
-    let profileInfo: ProfileInfo = await invoke("get_profile_info", {
-        profile: profiles.selectedProfile,
-    });
-
-    createPopup({ title: `${profileInfo.displayName}#${profileInfo.displayTag}`, subtext: "Threepole is active." });
 }
 
 function applyPreferences(p: Preferences) {
@@ -139,7 +119,7 @@ function applyPreferences(p: Preferences) {
 }
 
 function timerTick() {
-    if (!shown || !currentActivity || currentActivity.activityInfo.activityTypeHash != RAID_ACTIVITY_TYPE) {
+    if (!shown || currentActivity?.activityInfo?.activityTypeHash != RAID_ACTIVITY_TYPE) {
         return;
     }
 
