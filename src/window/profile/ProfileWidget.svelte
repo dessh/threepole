@@ -99,20 +99,13 @@
         height: 24px;
         float: right;
         padding: 2px;
-        transition: background-color 0.1s;
+        transition: background-color 0.1s, fill 0.1s;
         cursor: default;
+        fill: #aaa;
     }
 
     .profile button:hover {
-        background-color: rgba(0, 0, 0, 0.25);
-    }
-
-    .profile button svg {
-        fill: #aaa;
-        transition: fill 0.1s;
-    }
-
-    .profile button:hover svg {
+        background-color: rgba(0, 0, 0, 0.2);
         fill: #fff;
     }
 </style>
