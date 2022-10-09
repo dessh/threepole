@@ -12,7 +12,7 @@ use tokio::sync::Mutex;
 use crate::{
     api::{
         requests::BungieResponseError,
-        responses::{ActivityInfo, CompletedActivity, LatestCharacterActivity},
+        responses::{ActivityInfo, CompletedActivity, LatestCharacterActivity, ProfileInfo},
         Api, ApiError, Source,
     },
     config::profiles::Profile,
@@ -20,11 +20,19 @@ use crate::{
     ConfigContainer,
 };
 
-#[derive(Serialize, Default, Clone)]
+#[derive(Serialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct PlayerData {
     current_activity: Option<CurrentActivity>,
     activity_history: Vec<CompletedActivity>,
+    profile_info: ProfileInfo,
+}
+
+#[derive(Serialize, Default, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct PlayerDataStatus {
+    last_update: Option<PlayerData>,
+    error: Option<String>,
 }
 
 #[derive(Serialize, Clone)]
@@ -37,53 +45,86 @@ struct CurrentActivity {
 #[derive(Default)]
 pub struct PlayerDataPoller {
     task_handle: Option<JoinHandle<()>>,
-    current_playerdata: Option<Arc<Mutex<PlayerData>>>,
+    current_playerdata: Arc<Mutex<PlayerDataStatus>>,
     // TODO: maybe add preferences/profiles the poller was started on to see if it needs a reset on change
     // think about reset ting
 }
 
 impl PlayerDataPoller {
-    pub fn reset(&mut self, app_handle: AppHandle) {
+    pub async fn reset(&mut self, app_handle: AppHandle) {
         if let Some(t) = self.task_handle.as_ref() {
             t.abort();
         }
 
-        let current_playerdata = Arc::new(Mutex::new(PlayerData::default()));
+        {
+            let mut lock = self.current_playerdata.lock().await;
+            *lock = PlayerDataStatus::default();
 
-        let playerdata_clone = current_playerdata.clone();
+            send_data_update(&app_handle, lock.clone());
+        }
 
-        self.current_playerdata = Some(current_playerdata);
-        send_blank_update(&app_handle);
+        let playerdata_clone = self.current_playerdata.clone();
 
         self.task_handle = Some(async_runtime::spawn(async move {
-            let profile_opt = {
+            let profile = {
                 let container = app_handle.state::<ConfigContainer>();
                 let lock = container.0.lock().await;
-                lock.get_profiles().selected_profile.clone()
+
+                match &lock.get_profiles().selected_profile {
+                    Some(p) => p.clone(),
+                    None => {
+                        let mut lock = playerdata_clone.lock().await;
+                        lock.error = Some("No profile set".to_string());
+
+                        send_data_update(&app_handle, lock.clone());
+                        return;
+                    }
+                }
             };
 
-            let profile = match profile_opt {
-                Some(p) => p,
-                None => {
-                    send_data_update(&app_handle, Err("No profile set".to_string()));
-                    return;
+            let profile_info = {
+                let api = app_handle.state::<Api>();
+                let mut lock = api.profile_info_source.lock().await;
+
+                match lock.get(&profile).await {
+                    Ok(p) => p,
+                    Err(e) => {
+                        let mut lock = playerdata_clone.lock().await;
+                        lock.error = Some(format!("Failed to get profile info: {e}"));
+
+                        send_data_update(&app_handle, lock.clone());
+                        return;
+                    }
                 }
+            };
+
+            let mut playerdata = PlayerData {
+                current_activity: None,
+                activity_history: Vec::new(),
+                profile_info,
+            };
+
+            let res = match update_current(&app_handle, &mut playerdata.current_activity, &profile)
+                .await
+            {
+                Ok(_) => {
+                    update_history(&app_handle, &mut playerdata.activity_history, &profile).await
+                }
+                Err(e) => Err(e),
             };
 
             {
                 let mut lock = playerdata_clone.lock().await;
-
-                if let Err(e) =
-                    update_current(&app_handle, &mut lock.current_activity, &profile).await
-                {
-                    send_data_update(&app_handle, Err(e.to_string()));
-                } else if let Err(e) =
-                    update_history(&app_handle, &mut lock.activity_history, &profile).await
-                {
-                    send_data_update(&app_handle, Err(e.to_string()));
-                } else {
-                    send_data_update(&app_handle, Ok(lock.clone()));
+                match res {
+                    Ok(_) => {
+                        lock.last_update = Some(playerdata);
+                    }
+                    Err(e) => {
+                        lock.error = Some(e.to_string());
+                    }
                 }
+
+                send_data_update(&app_handle, lock.clone());
             }
 
             let mut count = 0;
@@ -91,21 +132,30 @@ impl PlayerDataPoller {
             loop {
                 tokio::time::sleep(API_POLL_INTERVAL).await;
 
-                {
-                    let mut lock = playerdata_clone.lock().await;
+                let mut last_update = playerdata_clone.lock().await.last_update.clone().unwrap();
 
-                    let res = if count < 5 {
-                        update_current(&app_handle, &mut lock.current_activity, &profile).await
-                    } else {
-                        count = 0;
-                        update_history(&app_handle, &mut lock.activity_history, &profile).await
-                    };
+                let res = if count < 5 {
+                    update_current(&app_handle, &mut last_update.current_activity, &profile).await
+                } else {
+                    count = 0;
+                    update_history(&app_handle, &mut last_update.activity_history, &profile).await
+                };
 
-                    match res {
-                        Ok(true) => send_data_update(&app_handle, Ok(lock.clone())),
-                        Err(e) => send_data_update(&app_handle, Err(e.to_string())),
-                        _ => (),
+                match res {
+                    Ok(true) => {
+                        let mut lock = playerdata_clone.lock().await;
+                        lock.error = None;
+                        lock.last_update = Some(last_update);
+
+                        send_data_update(&app_handle, lock.clone())
                     }
+                    Err(e) => {
+                        let mut lock = playerdata_clone.lock().await;
+                        lock.error = Some(e.to_string());
+
+                        send_data_update(&app_handle, lock.clone())
+                    }
+                    _ => (),
                 }
 
                 count += 1;
@@ -113,27 +163,21 @@ impl PlayerDataPoller {
         }));
     }
 
-    // For overlay to get initial data faster during poll timeout
-    pub fn get_data(&mut self) -> Option<PlayerData> {
-        return match &self.current_playerdata {
-            Some(m) => match m.try_lock() {
-                Ok(l) => Some(l.clone()),
-                Err(_) => None, // If lock currently in use, meaning stat update is in progress
-            },
-            None => None, // If lock doesn't exist, meaning poller isn't initialized
+    // For overlay / detail window to get initial data instead of waiting for poll
+    pub fn get_data(&mut self) -> Option<PlayerDataStatus> {
+        return match &self.current_playerdata.try_lock() {
+            Ok(p) => Some((*p).clone()), // If playerdata doesn't exist, meaning poller isn't initialized
+            Err(_) => None, // If lock currently in use, meaning stat update is in progress
         };
     }
 }
 
-fn send_blank_update(handle: &AppHandle) {
+fn send_data_update(handle: &AppHandle, data: PlayerDataStatus) {
     if let Some(o) = handle.get_window("overlay") {
-        o.emit("playerdata_update", None::<Result<PlayerData, String>>)
-            .unwrap();
+        o.emit("playerdata_update", data.clone()).unwrap();
     }
-}
 
-fn send_data_update(handle: &AppHandle, data: Result<PlayerData, String>) {
-    if let Some(o) = handle.get_window("overlay") {
+    if let Some(o) = handle.get_window("details") {
         o.emit("playerdata_update", data).unwrap();
     }
 }

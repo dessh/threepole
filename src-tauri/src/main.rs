@@ -15,7 +15,7 @@ use config::{
 use consts::APP_NAME;
 use pollers::{
     overlay::overlay_poller,
-    playerdata::{PlayerData, PlayerDataPoller},
+    playerdata::{PlayerDataPoller, PlayerDataStatus},
 };
 use tauri::{
     async_runtime::{self, JoinHandle},
@@ -73,7 +73,7 @@ async fn set_profiles(
     let mut lock = config_container.0.lock().await;
     lock.set_profiles(profiles).unwrap();
 
-    poller_container.0.lock().await.reset(app);
+    poller_container.0.lock().await.reset(app).await;
 
     Ok(())
 }
@@ -154,7 +154,7 @@ async fn create_overlay(handle: AppHandle) -> Result<(), tauri::Error> {
 #[tauri::command]
 async fn get_playerdata(
     poller_container: State<'_, PlayerDataPollerContainer>,
-) -> Result<Option<PlayerData>, ()> {
+) -> Result<Option<PlayerDataStatus>, ()> {
     Ok(poller_container.0.lock().await.get_data())
 }
 
@@ -267,7 +267,7 @@ fn main() -> anyhow::Result<()> {
 
                 create_overlay(handle.clone()).await.unwrap();
 
-                poller_container.0.lock().await.reset(handle.clone());
+                poller_container.0.lock().await.reset(handle.clone()).await;
 
                 let lock = config_container.0.lock().await;
 
