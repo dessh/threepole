@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{sync::Arc, time::Duration};
 
 use anyhow::{anyhow, bail, Result};
 use chrono::{DateTime, Utc};
@@ -16,7 +16,6 @@ use crate::{
         Api, ApiError, Source,
     },
     config::profiles::Profile,
-    consts::API_POLL_INTERVAL,
     ConfigContainer,
 };
 
@@ -135,7 +134,7 @@ impl PlayerDataPoller {
             let mut count = 0;
 
             loop {
-                tokio::time::sleep(API_POLL_INTERVAL).await;
+                tokio::time::sleep(Duration::from_secs(2)).await;
 
                 let mut last_update = playerdata_clone.lock().await.last_update.clone().unwrap();
 

@@ -12,7 +12,7 @@ use config::{
     profiles::{Profile, Profiles},
     ConfigManager,
 };
-use consts::APP_NAME;
+use consts::{APP_NAME, APP_VER};
 use pollers::{
     overlay::overlay_poller,
     playerdata::{PlayerDataPoller, PlayerDataStatus},
@@ -258,6 +258,11 @@ fn main() -> anyhow::Result<()> {
         .system_tray(
             SystemTray::new().with_menu(
                 SystemTrayMenu::new()
+                    .add_item(
+                        CustomMenuItem::new("version_info", format!("{APP_NAME} v{}", APP_VER))
+                            .disabled(),
+                    )
+                    .add_native_item(SystemTrayMenuItem::Separator)
                     .add_item(CustomMenuItem::new("preferences", "Preferences"))
                     .add_item(CustomMenuItem::new("set_profile", "Set profile"))
                     .add_native_item(SystemTrayMenuItem::Separator)
