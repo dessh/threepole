@@ -38,6 +38,22 @@ struct PlayerDataPollerContainer(Mutex<PlayerDataPoller>);
 struct OverlayPollerHandle(Mutex<Option<JoinHandle<()>>>);
 
 #[tauri::command]
+fn open_preferences(app: AppHandle) -> Result<(), tauri::Error> {
+    match app.get_window("preferences") {
+        Some(w) => w.set_focus(),
+        None => create_preferences_window(&app),
+    }
+}
+
+#[tauri::command]
+fn open_profiles(app: AppHandle) -> Result<(), tauri::Error> {
+    match app.get_window("profiles") {
+        Some(w) => w.set_focus(),
+        None => create_profiles_window(&app),
+    }
+}
+
+#[tauri::command]
 async fn get_preferences(container: State<'_, ConfigContainer>) -> Result<Preferences, ()> {
     Ok(container.0.lock().await.get_preferences().clone())
 }
@@ -158,11 +174,11 @@ async fn get_playerdata(
     Ok(poller_container.0.lock().await.get_data())
 }
 
-fn create_profile_window(handle: &AppHandle) -> Result<(), tauri::Error> {
+fn create_preferences_window(handle: &AppHandle) -> Result<(), tauri::Error> {
     WindowBuilder::new(
         handle,
-        "profile",
-        WindowUrl::App("./src/window/window.html#profile".into()),
+        "preferences",
+        WindowUrl::App("./src/window/window.html#preferences".into()),
     )
     .title(APP_NAME)
     .decorations(false)
@@ -175,11 +191,11 @@ fn create_profile_window(handle: &AppHandle) -> Result<(), tauri::Error> {
     Ok(())
 }
 
-fn create_preferences_window(handle: &AppHandle) -> Result<(), tauri::Error> {
+fn create_profiles_window(handle: &AppHandle) -> Result<(), tauri::Error> {
     WindowBuilder::new(
         handle,
-        "preferences",
-        WindowUrl::App("./src/window/window.html#preferences".into()),
+        "profiles",
+        WindowUrl::App("./src/window/window.html#profiles".into()),
     )
     .title(APP_NAME)
     .decorations(false)
@@ -228,16 +244,8 @@ fn main() -> anyhow::Result<()> {
             if let SystemTrayEvent::MenuItemClick { id, .. } = event {
                 match id.as_str() {
                     "exit" => app.exit(0),
-                    "set_profile" => match app.get_window("profile") {
-                        Some(w) => w.set_focus(),
-                        None => create_profile_window(app),
-                    }
-                    .unwrap(),
-                    "preferences" => match app.get_window("preferences") {
-                        Some(w) => w.set_focus(),
-                        None => create_preferences_window(app),
-                    }
-                    .unwrap(),
+                    "set_profile" => open_profiles(app.clone()).unwrap(),
+                    "preferences" => open_preferences(app.clone()).unwrap(),
                     _ => (),
                 }
             } else if let SystemTrayEvent::LeftClick { .. } = event {
@@ -249,6 +257,8 @@ fn main() -> anyhow::Result<()> {
             }
         })
         .invoke_handler(tauri::generate_handler![
+            open_preferences,
+            open_profiles,
             get_preferences,
             set_preferences,
             get_profiles,
@@ -272,7 +282,7 @@ fn main() -> anyhow::Result<()> {
                 let lock = config_container.0.lock().await;
 
                 if lock.get_profiles().selected_profile.is_none() {
-                    create_profile_window(&handle).unwrap();
+                    open_profiles(handle.clone()).unwrap();
                 }
             });
 

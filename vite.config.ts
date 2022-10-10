@@ -22,7 +22,7 @@ export default defineConfig({
         rollupOptions: {
             input: {
                 overlay: "./src/overlay/overlay.html",
-                profile: "./src/window/window.html"
+                window: "./src/window/window.html"
             }
         }
     },
