@@ -47,11 +47,11 @@ async function init() {
         stopTimerInterval();
     });
 
-    appWindow.listen("preferences_update", (p: TauriEvent<Preferences>) => applyPreferences(p.payload));
-    appWindow.listen("playerdata_update", (e: TauriEvent<PlayerDataStatus>) => refresh(e.payload));
-
     applyPreferences(await invoke("get_preferences"));
     refresh(await invoke("get_playerdata"));
+
+    appWindow.listen("preferences_update", (p: TauriEvent<Preferences>) => applyPreferences(p.payload));
+    appWindow.listen("playerdata_update", (e: TauriEvent<PlayerDataStatus>) => refresh(e.payload));
 }
 
 function startTimerInterval() {
