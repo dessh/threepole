@@ -37,20 +37,30 @@ struct PlayerDataPollerContainer(Mutex<PlayerDataPoller>);
 #[derive(Default)]
 struct OverlayPollerHandle(Mutex<Option<JoinHandle<()>>>);
 
-#[tauri::command]
-fn open_preferences(app: AppHandle) -> Result<(), tauri::Error> {
+// https://github.com/tauri-apps/wry/issues/583
+fn open_preferences_sync(app: AppHandle) -> Result<(), tauri::Error> {
     match app.get_window("preferences") {
         Some(w) => w.set_focus(),
         None => create_preferences_window(&app),
     }
 }
 
-#[tauri::command]
-fn open_profiles(app: AppHandle) -> Result<(), tauri::Error> {
+// https://github.com/tauri-apps/wry/issues/583
+fn open_profiles_sync(app: AppHandle) -> Result<(), tauri::Error> {
     match app.get_window("profiles") {
         Some(w) => w.set_focus(),
         None => create_profiles_window(&app),
     }
+}
+
+#[tauri::command]
+async fn open_preferences(app: AppHandle) -> Result<(), tauri::Error> {
+    open_preferences_sync(app)
+}
+
+#[tauri::command]
+async fn open_profiles(app: AppHandle) -> Result<(), tauri::Error> {
+    open_profiles_sync(app)
 }
 
 #[tauri::command]
@@ -244,8 +254,8 @@ fn main() -> anyhow::Result<()> {
             if let SystemTrayEvent::MenuItemClick { id, .. } = event {
                 match id.as_str() {
                     "exit" => app.exit(0),
-                    "set_profile" => open_profiles(app.clone()).unwrap(),
-                    "preferences" => open_preferences(app.clone()).unwrap(),
+                    "set_profile" => open_profiles_sync(app.clone()).unwrap(),
+                    "preferences" => open_preferences_sync(app.clone()).unwrap(),
                     _ => (),
                 }
             } else if let SystemTrayEvent::LeftClick { .. } = event {
@@ -282,7 +292,7 @@ fn main() -> anyhow::Result<()> {
                 let lock = config_container.0.lock().await;
 
                 if lock.get_profiles().selected_profile.is_none() {
-                    open_profiles(handle.clone()).unwrap();
+                    open_profiles_sync(handle.clone()).unwrap();
                 }
             });
 
