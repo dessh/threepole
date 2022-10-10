@@ -36,23 +36,30 @@
             {#if error}
                 <p class="error">{error}</p>
             {/if}
-            <p class="subheader">Overlay</p>
+            <div class="preference">
+                <StyledCheckbox bind:checked={preferences.enableOverlay}
+                    >Enable overlay</StyledCheckbox
+                >
+            </div>
             <div class="preference-group">
                 <div class="preference">
                     <StyledCheckbox
                         bind:checked={preferences.displayDailyClears}
+                        disabled={!preferences.enableOverlay}
                         >Display daily clears</StyledCheckbox
                     >
                 </div>
                 <div class="preference">
                     <StyledCheckbox
                         bind:checked={preferences.displayClearNotifications}
+                        disabled={!preferences.enableOverlay}
                         >Display raid clear notifications</StyledCheckbox
                     >
                 </div>
                 <div class="preference">
                     <StyledCheckbox
                         bind:checked={preferences.displayMilliseconds}
+                        disabled={!preferences.enableOverlay}
                         >Display timer milliseconds</StyledCheckbox
                     >
                 </div>
@@ -71,12 +78,6 @@
 
     .preferences {
         margin: 16px 48px;
-    }
-
-    .subheader {
-        font-size: 18px;
-        margin-bottom: 8px;
-        font-weight: 500;
     }
 
     .preference-group {
