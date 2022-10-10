@@ -200,9 +200,9 @@ fn create_details_window(handle: &AppHandle) -> Result<(), tauri::Error> {
     )
     .title(APP_NAME)
     .decorations(false)
-    .inner_size(800.0, 600.0)
-    .resizable(true)
-    .always_on_top(false)
+    .inner_size(600.0, 600.0)
+    .resizable(false)
+    .always_on_top(true)
     .visible(false)
     .build()?;
 
