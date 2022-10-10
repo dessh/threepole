@@ -11,7 +11,7 @@ type BungieProfile = {
 
 type Profiles = {
     savedProfiles: Profile[],
-    selectedProfile: Profile | null,
+    selectedProfile: Profile,
 }
 
 type Profile = {
@@ -20,8 +20,10 @@ type Profile = {
 };
 
 type ProfileInfo = {
+    privacy: number;
     displayName: string;
     displayTag: number;
+    characterIds: string[];
 };
 
 type Preferences = {
@@ -32,8 +34,8 @@ type Preferences = {
 };
 
 type PlayerDataStatus = {
-    lastUpdate: PlayerData | null,
-    error: string | null,
+    lastUpdate: PlayerData,
+    error: string,
 }
 
 type PlayerData = {
@@ -44,7 +46,8 @@ type PlayerData = {
 
 type CurrentActivity = {
     startDate: string;
-    activityInfo: ActivityInfo | null;
+    activityHash: number;
+    activityInfo: ActivityInfo;
 };
 
 type ActivityInfo = {
