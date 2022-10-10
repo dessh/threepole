@@ -73,6 +73,9 @@
             "playerdata_update",
             (e: TauriEvent<PlayerDataStatus>) => handleUpdate(e.payload)
         );
+
+        // Refresh '*m ago' text
+        setInterval(() => (playerData = playerData), 30000);
     }
 
     init();
