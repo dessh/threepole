@@ -19,8 +19,8 @@ use pollers::{
 };
 use tauri::{
     async_runtime::{self, JoinHandle},
-    AppHandle, CustomMenuItem, Manager, State, SystemTray, SystemTrayEvent, SystemTrayMenu,
-    SystemTrayMenuItem, WindowBuilder, WindowUrl,
+    AppHandle, CustomMenuItem, Manager, RunEvent, State, SystemTray, SystemTrayEvent,
+    SystemTrayMenu, SystemTrayMenuItem, WindowBuilder, WindowUrl,
 };
 use tokio::sync::Mutex;
 
@@ -38,29 +38,29 @@ struct PlayerDataPollerContainer(Mutex<PlayerDataPoller>);
 struct OverlayPollerHandle(Mutex<Option<JoinHandle<()>>>);
 
 // https://github.com/tauri-apps/wry/issues/583
-fn open_preferences_sync(app: AppHandle) -> Result<(), tauri::Error> {
-    match app.get_window("preferences") {
+fn open_preferences_sync(handle: AppHandle) -> Result<(), tauri::Error> {
+    match handle.get_window("preferences") {
         Some(w) => w.set_focus(),
-        None => create_preferences_window(&app),
+        None => create_preferences_window(&handle),
     }
 }
 
 // https://github.com/tauri-apps/wry/issues/583
-fn open_profiles_sync(app: AppHandle) -> Result<(), tauri::Error> {
-    match app.get_window("profiles") {
+fn open_profiles_sync(handle: AppHandle) -> Result<(), tauri::Error> {
+    match handle.get_window("profiles") {
         Some(w) => w.set_focus(),
-        None => create_profiles_window(&app),
+        None => create_profiles_window(&handle),
     }
 }
 
 #[tauri::command]
-async fn open_preferences(app: AppHandle) -> Result<(), tauri::Error> {
-    open_preferences_sync(app)
+async fn open_preferences(handle: AppHandle) -> Result<(), tauri::Error> {
+    open_preferences_sync(handle)
 }
 
 #[tauri::command]
-async fn open_profiles(app: AppHandle) -> Result<(), tauri::Error> {
-    open_profiles_sync(app)
+async fn open_profiles(handle: AppHandle) -> Result<(), tauri::Error> {
+    open_profiles_sync(handle)
 }
 
 #[tauri::command]
@@ -70,15 +70,26 @@ async fn get_preferences(container: State<'_, ConfigContainer>) -> Result<Prefer
 
 #[tauri::command]
 async fn set_preferences(
-    app: AppHandle,
+    handle: AppHandle,
     preferences: Preferences,
     container: State<'_, ConfigContainer>,
+    poller_handle: State<'_, OverlayPollerHandle>,
 ) -> Result<(), ()> {
     let mut lock = container.0.lock().await;
     lock.set_preferences(preferences.clone()).unwrap();
 
-    if let Some(o) = app.get_window("overlay") {
-        o.emit("preferences_update", preferences).unwrap();
+    if let Some(o) = handle.get_window("overlay") {
+        if preferences.enable_overlay {
+            o.emit("preferences_update", preferences).unwrap();
+        } else {
+            if let Some(h) = poller_handle.0.lock().await.as_ref() {
+                h.abort();
+            }
+
+            o.close().unwrap();
+        }
+    } else if preferences.enable_overlay {
+        create_overlay(handle).await.unwrap();
     }
 
     Ok(())
@@ -91,7 +102,7 @@ async fn get_profiles(container: State<'_, ConfigContainer>) -> Result<Profiles,
 
 #[tauri::command]
 async fn set_profiles(
-    app: AppHandle,
+    handle: AppHandle,
     profiles: Profiles,
     config_container: State<'_, ConfigContainer>,
     poller_container: State<'_, PlayerDataPollerContainer>,
@@ -99,7 +110,7 @@ async fn set_profiles(
     let mut lock = config_container.0.lock().await;
     lock.set_profiles(profiles).unwrap();
 
-    poller_container.0.lock().await.reset(app).await;
+    poller_container.0.lock().await.reset(handle).await;
 
     Ok(())
 }
@@ -253,18 +264,18 @@ fn main() -> anyhow::Result<()> {
                     .add_item(CustomMenuItem::new("exit", "Exit")),
             ),
         )
-        .on_system_tray_event(|app, event| {
+        .on_system_tray_event(|handle, event| {
             if let SystemTrayEvent::MenuItemClick { id, .. } = event {
                 match id.as_str() {
-                    "exit" => app.exit(0),
-                    "set_profile" => open_profiles_sync(app.clone()).unwrap(),
-                    "preferences" => open_preferences_sync(app.clone()).unwrap(),
+                    "exit" => handle.exit(0),
+                    "set_profile" => open_profiles_sync(handle.clone()).unwrap(),
+                    "preferences" => open_preferences_sync(handle.clone()).unwrap(),
                     _ => (),
                 }
             } else if let SystemTrayEvent::LeftClick { .. } = event {
-                match app.get_window("details") {
+                match handle.get_window("details") {
                     Some(w) => w.set_focus(),
-                    None => create_details_window(app),
+                    None => create_details_window(handle),
                 }
                 .unwrap()
             }
@@ -288,20 +299,28 @@ fn main() -> anyhow::Result<()> {
                 let config_container = handle.state::<ConfigContainer>();
                 let poller_container = handle.state::<PlayerDataPollerContainer>();
 
-                create_overlay(handle.clone()).await.unwrap();
-
                 poller_container.0.lock().await.reset(handle.clone()).await;
 
                 let lock = config_container.0.lock().await;
 
                 if lock.get_profiles().selected_profile.is_none() {
-                    open_profiles_sync(handle.clone()).unwrap();
+                    create_profiles_window(&handle).unwrap();
+                }
+
+                if lock.get_preferences().enable_overlay {
+                    create_overlay(handle.clone()).await.unwrap();
                 }
             });
 
             Ok(())
         })
-        .run(tauri::generate_context!())?;
+        .build(tauri::generate_context!())?
+        .run(|_, event| match event {
+            RunEvent::ExitRequested { api, .. } => {
+                api.prevent_exit();
+            }
+            _ => (),
+        });
 
     Ok(())
 }
