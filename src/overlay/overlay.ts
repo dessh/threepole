@@ -3,7 +3,7 @@ import "./overlay.css"
 import { appWindow } from "@tauri-apps/api/window";
 import { invoke } from "@tauri-apps/api/tauri";
 import createPopup from "./popups";
-import type { TauriEvent, Profiles, ProfileInfo, Preferences, PlayerData, CurrentActivity, PlayerDataStatus } from "../types";
+import type { TauriEvent, Preferences, CurrentActivity, PlayerDataStatus } from "../types";
 import { RAID_ACTIVITY_TYPE } from "../consts";
 import { countClears, formatMillis, formatTime } from "../util";
 
