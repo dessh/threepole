@@ -18,6 +18,7 @@
     let msText = "";
 
     let playerData: PlayerData;
+    let error: string;
     $: countedClears = playerData ? countClears(playerData.activityHistory) : 0;
 
     let activityInfoMap: { [hash: number]: ActivityInfo } = {};
@@ -40,10 +41,6 @@
         msText = formatMillis(millis);
     }
 
-    appWindow.listen("playerdata_update", (e: TauriEvent<PlayerDataStatus>) => {
-        playerData = e.payload.lastUpdate;
-    });
-
     async function getActivityInfo(hash: number): Promise<ActivityInfo> {
         if (activityInfoMap[hash]) {
             return activityInfoMap[hash];
@@ -58,30 +55,53 @@
         return activityInfo;
     }
 
+    function handleUpdate(status: PlayerDataStatus) {
+        playerData = status?.lastUpdate;
+        error = status?.error;
+
+        let currentActivity = playerData?.currentActivity;
+        if (currentActivity?.activityInfo) {
+            activityInfoMap[currentActivity.activityHash] =
+                currentActivity.activityInfo;
+        }
+    }
+
     async function init() {
-        playerData = (await invoke<PlayerDataStatus>("get_playerdata"))
-            ?.lastUpdate;
+        handleUpdate(await invoke("get_playerdata"));
+
+        appWindow.listen(
+            "playerdata_update",
+            (e: TauriEvent<PlayerDataStatus>) => handleUpdate(e.payload)
+        );
     }
 
     init();
 </script>
 
 <Window>
-    {#if playerData}
-        <div class="margin">
+    {#if playerData || error}
+        <div class="header margin">
             <div class="status">
-                {#if playerData.currentActivity?.activityInfo?.activityTypeHash == RAID_ACTIVITY_TYPE}
-                    <h1>{timeText}<span class="small grey">{msText}</span></h1>
-                    <h2 class="grey">
-                        {playerData.currentActivity.activityInfo.name.toUpperCase()}
-                    </h2>
+                {#if playerData}
+                    {#if playerData.currentActivity?.activityInfo?.activityTypeHash == RAID_ACTIVITY_TYPE}
+                        <h1>
+                            {timeText}<span class="small grey">{msText}</span>
+                        </h1>
+                        <h2 class="grey">
+                            {playerData.currentActivity.activityInfo.name.toUpperCase()}
+                        </h2>
+                    {:else}
+                        <h1 class="small">
+                            {playerData.profileInfo.displayName}<span
+                                class="grey"
+                                >#{playerData.profileInfo.displayTag}</span
+                            >
+                        </h1>
+                        <h2 class="grey">NOT IN RAID</h2>
+                    {/if}
                 {:else}
-                    <h1 class="small">
-                        {playerData.profileInfo.displayName}<span class="grey"
-                            >#{playerData.profileInfo.displayTag}</span
-                        >
-                    </h1>
-                    <h2 class="grey">NOT IN RAID</h2>
+                    <h1 class="small">Error</h1>
+                    <p class="error">{error}</p>
                 {/if}
             </div>
             <div class="actions">
@@ -107,25 +127,27 @@
                 </button>
             </div>
         </div>
-        <div class="margin">
-            <p>
-                <span>Today's clears</span>
-                <span class="key">
-                    <span class="item">
-                        <Dot completed={true} />{countedClears}
+        {#if playerData}
+            <div class="margin">
+                <p>
+                    <span>Today's clears</span>
+                    <span class="key">
+                        <span class="item">
+                            <Dot completed={true} />{countedClears}
+                        </span>
+                        <span class="item">
+                            <Dot completed={false} />{playerData.activityHistory
+                                .length - countedClears}
+                        </span>
                     </span>
-                    <span class="item">
-                        <Dot completed={false} />{playerData.activityHistory
-                            .length - countedClears}
-                    </span>
-                </span>
-            </p>
-            {#each playerData.activityHistory as activity}
-                {#await getActivityInfo(activity.activityHash) then activityInfo}
-                    <PreviousRaid {activity} {activityInfo} />
-                {/await}
-            {/each}
-        </div>
+                </p>
+                {#each playerData.activityHistory as activity}
+                    {#await getActivityInfo(activity.activityHash) then activityInfo}
+                        <PreviousRaid {activity} {activityInfo} />
+                    {/await}
+                {/each}
+            </div>
+        {/if}
     {:else}
         <div class="loader">
             <Loader />
@@ -152,6 +174,7 @@
     h1 {
         font-size: 56px;
         font-weight: 600;
+        margin-bottom: 4px;
     }
 
     h1.small,
@@ -162,15 +185,18 @@
     h2 {
         font-size: 20px;
         font-weight: 300;
-        margin-top: 4px;
+    }
+
+    .header {
+        display: flex;
     }
 
     .status {
-        display: inline-block;
+        flex: 1;
     }
 
-    .actions {
-        float: right;
+    .error {
+        color: var(--error);
     }
 
     .actions button {
