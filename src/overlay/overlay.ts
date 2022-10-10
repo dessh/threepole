@@ -26,29 +26,45 @@ let timerInterval;
 
 async function init() {
     appWindow.listen("show", () => {
-        if (!timerInterval) {
-            timerInterval = setInterval(() => requestAnimationFrame(timerTick), 1000 / 30);
+        if (shown) {
+            return;
         }
+
+        startTimerInterval();
 
         appWindow.show();
         shown = true;
     });
 
     appWindow.listen("hide", () => {
+        if (!shown) {
+            return;
+        }
+
         appWindow.hide();
         shown = false;
 
-        if (timerInterval) {
-            clearTimeout(timerInterval);
-            timerInterval = null;
-        }
+        stopTimerInterval();
     });
 
     appWindow.listen("preferences_update", (p: TauriEvent<Preferences>) => applyPreferences(p.payload));
     appWindow.listen("playerdata_update", (e: TauriEvent<PlayerDataStatus>) => refresh(e.payload));
 
-    refresh(await invoke("get_playerdata"));
     applyPreferences(await invoke("get_preferences"));
+    refresh(await invoke("get_playerdata"));
+}
+
+function startTimerInterval() {
+    if (!timerInterval && prefs) {
+        timerInterval = setInterval(() => requestAnimationFrame(timerTick), 1000 / (prefs.displayMilliseconds ? 30 : 2));
+    }
+}
+
+function stopTimerInterval() {
+    if (timerInterval) {
+        clearTimeout(timerInterval);
+        timerInterval = null;
+    }
 }
 
 function refresh(playerDataStatus: PlayerDataStatus) {
@@ -116,6 +132,9 @@ function applyPreferences(p: Preferences) {
     } else {
         msElem.classList.add("hidden");
     }
+
+    stopTimerInterval();
+    startTimerInterval();
 }
 
 function timerTick() {
