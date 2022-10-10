@@ -39,6 +39,7 @@ pub struct PlayerDataStatus {
 #[serde(rename_all = "camelCase")]
 struct CurrentActivity {
     start_date: DateTime<Utc>,
+    activity_hash: usize,
     activity_info: Option<ActivityInfo>,
 }
 
@@ -100,6 +101,7 @@ impl PlayerDataPoller {
 
             let mut current_activity = CurrentActivity {
                 start_date: DateTime::<Utc>::MIN_UTC,
+                activity_hash: 0,
                 activity_info: None,
             };
             let mut activity_history = Vec::new();
@@ -221,6 +223,11 @@ async fn update_current(
                 // for a given activity start_date, it should
                 // stay None until start_date changes again
             }
+
+            if last_activity.activity_hash == latest_activity.current_activity_hash {
+                return Ok(false);
+                // Return if the activity hash and time are the same
+            }
         }
         std::cmp::Ordering::Greater => return Ok(false),
         // Only return if our last-fetched activity is more recent,
@@ -262,6 +269,7 @@ async fn update_current(
         return Ok(true);
     }
 
+    last_activity.activity_hash = latest_activity.current_activity_hash;
     last_activity.activity_info = Some(current_activity_info);
 
     Ok(true)
