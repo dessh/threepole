@@ -25,6 +25,7 @@ type ProfileInfo = {
 };
 
 type Preferences = {
+    enableOverlay: boolean;
     displayDailyClears: boolean;
     displayClearNotifications: boolean;
     displayMilliseconds: boolean;

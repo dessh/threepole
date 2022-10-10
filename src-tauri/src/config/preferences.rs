@@ -6,6 +6,7 @@ use super::ConfigFile;
 #[serde(rename_all = "camelCase")]
 #[serde(default)]
 pub struct Preferences {
+    pub enable_overlay: bool,
     pub display_daily_clears: bool,
     pub display_clear_notifications: bool,
     pub display_milliseconds: bool,
@@ -14,6 +15,7 @@ pub struct Preferences {
 impl Default for Preferences {
     fn default() -> Self {
         Self {
+            enable_overlay: true,
             display_daily_clears: true,
             display_clear_notifications: true,
             display_milliseconds: true,
