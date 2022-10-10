@@ -3,7 +3,7 @@
     import { appWindow } from "@tauri-apps/api/window";
     import LineButton from "../widgets/LineButton.svelte";
     import Window from "../Window.svelte";
-    import Loader from "./LoaderWidget.svelte";
+    import Loader from "../widgets/Loader.svelte";
     import ProfileWidget from "./ProfileWidget.svelte";
     import ProfileAddWidget from "./ProfileAddWidget.svelte";
     import type {
