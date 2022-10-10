@@ -69,6 +69,8 @@ h1 {
 
     --primary-background: #12171c;
     --secondary-background: #180f1c;
+
+    --error: #b53e3e;
 }
 
 ::selection {

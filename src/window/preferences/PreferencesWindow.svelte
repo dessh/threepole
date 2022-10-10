@@ -90,7 +90,7 @@
     }
 
     .error {
-        color: #b53e3e;
+        color: var(--error);
     }
 
     .actions {

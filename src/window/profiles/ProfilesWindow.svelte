@@ -408,7 +408,7 @@
     }
 
     .error {
-        color: #b53e3e;
+        color: var(--error);
         font-size: 14px;
         margin-top: 12px;
     }
