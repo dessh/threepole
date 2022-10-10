@@ -129,8 +129,8 @@
         </div>
         {#if playerData}
             <div class="margin">
-                <p>
-                    <span>Today's clears</span>
+                <p class="summary">
+                    <span>Today's raids</span>
                     <span class="key">
                         <span class="item">
                             <Dot completed={true} />{countedClears}
@@ -146,6 +146,9 @@
                         <PreviousRaid {activity} {activityInfo} />
                     {/await}
                 {/each}
+                {#if playerData.activityHistory.length == 0}
+                    <p class="list-empty">No raids completed today.</p>
+                {/if}
             </div>
         {/if}
     {:else}
@@ -210,8 +213,10 @@
         background-color: rgba(0, 0, 0, 0.2);
     }
 
-    p {
+    .summary {
         font-size: 16px;
+        padding-bottom: 8px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     }
 
     .key {
@@ -224,5 +229,12 @@
 
     .key * {
         vertical-align: middle;
+    }
+
+    .list-empty {
+        text-align: center;
+        color: #aaa;
+        margin-top: 12px;
+        font-size: 14px;
     }
 </style>
