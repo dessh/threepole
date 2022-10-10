@@ -122,13 +122,14 @@ impl PlayerDataPoller {
                         };
 
                         lock.last_update = Some(playerdata);
+                        send_data_update(&app_handle, lock.clone());
                     }
                     Err(e) => {
                         lock.error = Some(e.to_string());
+                        send_data_update(&app_handle, lock.clone());
+                        return;
                     }
                 }
-
-                send_data_update(&app_handle, lock.clone());
             }
 
             let mut count = 0;

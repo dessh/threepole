@@ -1,33 +1,34 @@
-#loader {
+.corner {
     position: absolute;
     left: 16px;
     top: 12px;
-}
-
-#widget {
-    position: absolute;
-    left: 16px;
-    top: 12px;
-    text-shadow: 1px 1px 2px #000;
-    font-size: 20px;
-    color: #fff;
 }
 
 .hidden {
     display: none;
 }
 
-span {
-    vertical-align: middle;
+#widget {
+    text-shadow: 1px 1px 2px #000;
+    font-size: 20px;
+    color: #fff;
 }
 
 svg {
-    fill: #aaa;
-    vertical-align: middle;
-    margin-right: 10px;
+    fill: #fff;
     filter: drop-shadow(1px 1px 2px #000);
 }
 
-.grey {
+#widget span {
+    vertical-align: middle;
+}
+
+#widget svg {
+    fill: #aaa;
+    vertical-align: middle;
+    margin-right: 10px;
+}
+
+#widget .grey {
     color: #aaa;
 }
