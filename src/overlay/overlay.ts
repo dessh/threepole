@@ -68,7 +68,7 @@ function stopTimerInterval() {
 }
 
 function refresh(playerDataStatus: PlayerDataStatus) {
-    let playerData = playerDataStatus.lastUpdate;
+    let playerData = playerDataStatus?.lastUpdate;
 
     if (!playerData) {
         widgetElem.classList.add("hidden");
@@ -76,7 +76,7 @@ function refresh(playerDataStatus: PlayerDataStatus) {
         currentActivity = null;
         doneInitialRefresh = false;
 
-        if (playerDataStatus.error) {
+        if (playerDataStatus?.error) {
             loaderElem.classList.add("hidden");
             errorElem.classList.remove("hidden");
             createPopup({ title: "Failed to fetch initial stats", subtext: playerDataStatus.error });
