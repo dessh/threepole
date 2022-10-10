@@ -8,6 +8,7 @@ import { RAID_ACTIVITY_TYPE } from "../consts";
 import { countClears, formatMillis, formatTime } from "../util";
 
 const loaderElem = document.querySelector<HTMLElement>("#loader")!;
+const errorElem = document.querySelector<HTMLElement>("#error")!;
 const widgetElem = document.querySelector<HTMLElement>("#widget")!;
 const timerElem = document.querySelector<HTMLElement>("#timer")!;
 const timeElem = document.querySelector<HTMLElement>("#time")!;
@@ -54,20 +55,25 @@ function refresh(playerDataStatus: PlayerDataStatus) {
     let playerData = playerDataStatus.lastUpdate;
 
     if (!playerData) {
-        loaderElem.classList.remove("hidden");
         widgetElem.classList.add("hidden");
 
         currentActivity = null;
         doneInitialRefresh = false;
 
         if (playerDataStatus.error) {
+            loaderElem.classList.add("hidden");
+            errorElem.classList.remove("hidden");
             createPopup({ title: "Failed to fetch initial stats", subtext: playerDataStatus.error });
+        } else {
+            errorElem.classList.add("hidden");
+            loaderElem.classList.remove("hidden");
         }
 
         return;
     }
 
     loaderElem.classList.add("hidden");
+    errorElem.classList.add("hidden");
     widgetElem.classList.remove("hidden");
 
     currentActivity = playerData.currentActivity;
