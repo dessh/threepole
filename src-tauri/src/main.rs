@@ -310,6 +310,8 @@ fn main() -> anyhow::Result<()> {
                 if lock.get_preferences().enable_overlay {
                     create_overlay(handle.clone()).await.unwrap();
                 }
+
+                create_details_window(&handle).unwrap();
             });
 
             Ok(())
