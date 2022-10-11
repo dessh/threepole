@@ -36,8 +36,12 @@ body {
     transition: fill 0.1s;
 }
 
-.titlebar button:hover {
+.titlebar button#exit-button:hover {
     background-color: var(--primary-highlight);
+}
+
+.titlebar button#minimize-button:hover {
+    background-color: rgba(255, 255, 255, 0.05);
 }
 
 .titlebar button:hover svg {
