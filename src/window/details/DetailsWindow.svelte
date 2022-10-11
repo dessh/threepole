@@ -80,6 +80,9 @@
 
         // Refresh '*m ago' text
         setInterval(() => (playerData = playerData), 30000);
+
+        showBanner =
+            new URLSearchParams(window.location.search).get("welcome") == "";
     }
 
     init();
@@ -232,7 +235,7 @@
 
     .banner .text .title {
         margin-bottom: 6px;
-        font-weight: 400;
+        font-weight: 500;
         font-size: 16px;
     }
 

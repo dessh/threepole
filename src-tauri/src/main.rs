@@ -109,7 +109,7 @@ async fn set_profiles(
             create_overlay(handle.clone()).await.unwrap();
         }
 
-        open_details_window(&handle).unwrap();
+        open_details_window(&handle, true).unwrap();
     }
 
     poller_container.0.lock().await.reset(handle).await;
@@ -239,7 +239,7 @@ fn open_profiles_window(handle: &AppHandle) -> Result<(), tauri::Error> {
     Ok(())
 }
 
-fn open_details_window(handle: &AppHandle) -> Result<(), tauri::Error> {
+fn open_details_window(handle: &AppHandle, welcome: bool) -> Result<(), tauri::Error> {
     if let Some(w) = handle.get_window("details") {
         w.unminimize()?;
         return w.set_focus();
@@ -248,7 +248,13 @@ fn open_details_window(handle: &AppHandle) -> Result<(), tauri::Error> {
     WindowBuilder::new(
         handle,
         "details",
-        WindowUrl::App("./src/window/window.html#details".into()),
+        WindowUrl::App(
+            format!(
+                "./src/window/window.html{}#details",
+                if welcome { "?welcome" } else { "" }
+            )
+            .into(),
+        ),
     )
     .title(APP_NAME)
     .decorations(false)
@@ -267,7 +273,7 @@ async fn activate(handle: &AppHandle) -> Result<(), tauri::Error> {
     if lock.get_profiles().selected_profile.is_none() {
         open_profiles_window(&handle)
     } else {
-        open_details_window(&handle)
+        open_details_window(&handle, false)
     }
 }
 
@@ -357,7 +363,7 @@ async fn main() -> anyhow::Result<()> {
                         create_overlay(handle.clone()).await.unwrap();
                     }
 
-                    open_details_window(&handle).unwrap();
+                    open_details_window(&handle, false).unwrap();
                 }
 
                 let poller_container = handle.state::<PlayerDataPollerContainer>();
