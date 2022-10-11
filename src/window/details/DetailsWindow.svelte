@@ -9,7 +9,11 @@
     } from "../../types";
     import { countClears, formatMillis, formatTime } from "../../util";
     import PreviousRaid from "./PreviousRaid.svelte";
-    import { RAID_ACTIVITY_TYPE } from "../../consts";
+    import {
+        DISCORD_INVITE,
+        RAID_ACTIVITY_TYPE,
+        REPOSITORY_LINK,
+    } from "../../consts";
     import Dot from "./Dot.svelte";
     import Loader from "../widgets/Loader.svelte";
 
@@ -104,6 +108,20 @@
                 {:else}
                     <h1 class="small">Error</h1>
                     <p class="error">{error}</p>
+                    <div class="error-actions">
+                        <p>If this persists, consider:</p>
+                        <li>
+                            Joining the <a href={DISCORD_INVITE} target="_blank"
+                                >Discord</a
+                            > for support
+                        </li>
+                        <li>
+                            Opening an issue on <a
+                                href={REPOSITORY_LINK}
+                                target="_blank">GitHub</a
+                            >
+                        </li>
+                    </div>
                 {/if}
             </div>
             <div class="actions">
@@ -202,6 +220,25 @@
 
     .error {
         color: var(--error);
+        margin-top: 8px;
+        font-weight: 300;
+    }
+
+    .error-actions {
+        margin-top: 20px;
+        line-height: 150%;
+    }
+
+    .error-actions p {
+        margin-bottom: 8px;
+        font-size: 16px;
+        font-weight: 500;
+    }
+
+    .error-actions li {
+        font-size: 16px;
+        margin-left: 12px;
+        font-weight: 300;
     }
 
     .actions button {
