@@ -9,10 +9,58 @@ use windows::Win32::{
         ProcessStatus::K32GetModuleFileNameExW,
         Threading::{OpenProcess, PROCESS_QUERY_INFORMATION},
     },
-    UI::WindowsAndMessaging::{GetForegroundWindow, GetWindowRect, GetWindowThreadProcessId},
+    UI::{
+        Shell::SHQueryUserNotificationState,
+        WindowsAndMessaging::{GetForegroundWindow, GetWindowRect, GetWindowThreadProcessId},
+    },
 };
 
 use crate::consts::{OVERLAY_POLL_INTERVAL, TARGET_NAME};
+
+enum PollResult {
+    Open(HWND),
+    Closed,
+    Retain,
+}
+
+#[derive(Default)]
+struct Poller {
+    hwnd_names: HashMap<isize, String>,
+}
+
+impl Poller {
+    async fn poll(&mut self, overlay_hwnd: isize) -> PollResult {
+        let notification_state = unsafe { SHQueryUserNotificationState() };
+
+        match notification_state {
+            Ok(n) if n.0 == 3 => return PollResult::Closed, // If in DX exclusive fullscreen mode
+            _ => (),
+        }
+
+        let foreground_hwnd = unsafe { GetForegroundWindow() };
+
+        if overlay_hwnd == foreground_hwnd.0 {
+            return PollResult::Retain;
+        }
+
+        let focused_name = match self.hwnd_names.get(&foreground_hwnd.0) {
+            Some(n) => n,
+            None => match get_hwnd_exec(foreground_hwnd) {
+                Some(n) => {
+                    self.hwnd_names.insert(foreground_hwnd.0, n);
+                    self.hwnd_names.get(&foreground_hwnd.0).unwrap()
+                }
+                None => return PollResult::Closed,
+            },
+        };
+
+        if focused_name == TARGET_NAME {
+            PollResult::Open(foreground_hwnd)
+        } else {
+            PollResult::Closed
+        }
+    }
+}
 
 fn get_hwnd_exec(hwnd: HWND) -> Option<String> {
     if hwnd.0 == 0 {
@@ -46,63 +94,54 @@ fn get_hwnd_exec(hwnd: HWND) -> Option<String> {
     return path.file_name().map(|s| s.to_string_lossy().into_owned());
 }
 
-async fn poll(handle: &AppHandle, hwnd_names: &mut HashMap<isize, String>) {
-    let overlay = match handle.get_window("overlay") {
-        Some(h) => h,
-        None => return,
-    };
-
-    let foreground_hwnd = unsafe { GetForegroundWindow() };
-
-    if let RawWindowHandle::Win32(h) = overlay.raw_window_handle() {
-        if h.hwnd as isize == foreground_hwnd.0 {
-            return;
-        }
-    }
-
-    let focused_name = if let Some(n) = hwnd_names.get(&foreground_hwnd.0) {
-        n
-    } else {
-        match get_hwnd_exec(foreground_hwnd) {
-            Some(n) => {
-                hwnd_names.insert(foreground_hwnd.0, n);
-                hwnd_names.get(&foreground_hwnd.0).unwrap()
-            }
-            None => return,
-        }
-    };
-
-    if focused_name != TARGET_NAME {
-        overlay.emit("hide", ()).unwrap();
-        return;
-    }
-
-    let mut dims = RECT::default();
-
-    unsafe { GetWindowRect(foreground_hwnd, &mut dims) };
-
-    overlay
-        .set_position(PhysicalPosition {
-            x: dims.left,
-            y: dims.top,
-        })
-        .unwrap();
-
-    overlay
-        .set_size(PhysicalSize {
-            width: dims.right - dims.left,
-            height: dims.bottom - dims.top,
-        })
-        .unwrap();
-
-    overlay.emit("show", ()).unwrap();
-}
-
 pub async fn overlay_poller(handle: AppHandle) {
-    let mut hwnd_names = HashMap::new();
+    let mut poller = Poller::default();
 
     loop {
-        poll(&handle, &mut hwnd_names).await;
+        let (overlay, overlay_hwnd) = {
+            let overlay = match handle.get_window("overlay") {
+                Some(h) => h,
+                None => return,
+            };
+
+            match overlay.raw_window_handle() {
+                RawWindowHandle::Win32(h) => {
+                    let hwnd = h.hwnd as isize;
+                    if hwnd == 0 {
+                        return;
+                    }
+
+                    (overlay, hwnd)
+                }
+                _ => return,
+            }
+        };
+
+        match poller.poll(overlay_hwnd).await {
+            PollResult::Open(hwnd) => {
+                let mut dims = RECT::default();
+
+                unsafe { GetWindowRect(hwnd, &mut dims) };
+
+                overlay
+                    .set_position(PhysicalPosition {
+                        x: dims.left,
+                        y: dims.top,
+                    })
+                    .unwrap();
+
+                overlay
+                    .set_size(PhysicalSize {
+                        width: dims.right - dims.left,
+                        height: dims.bottom - dims.top,
+                    })
+                    .unwrap();
+
+                overlay.emit("show", ()).unwrap();
+            }
+            PollResult::Closed => overlay.emit("hide", ()).unwrap(),
+            PollResult::Retain => (),
+        }
 
         tokio::time::sleep(OVERLAY_POLL_INTERVAL).await;
     }
