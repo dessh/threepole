@@ -30,9 +30,9 @@
             <span>{activityInfo.name}</span>
         </p>
         <p>
-            {timeElapsed()}<span
+            {activity.activityDuration}<span
                 class="center-dot"
-            />{activity.activityDuration}
+            />{timeElapsed()}
         </p>
     </div>
     <a href="https://raid.report/pgcr/{activity.instanceId}" target="_blank"
