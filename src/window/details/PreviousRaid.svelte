@@ -92,14 +92,12 @@
         float: right;
         padding: 4px;
         font-size: 0;
-        transition: background-color 0.1s;
+        fill: #aaa;
+        transition: background-color 0.1s, fill 0.1s;
     }
 
     a:hover {
-        background-color: rgba(0, 0, 0, 0.2);
-    }
-
-    svg {
+        background-color: rgba(255, 255, 255, 0.05);
         fill: #fff;
     }
 </style>
