@@ -221,7 +221,6 @@
     .error {
         color: var(--error);
         margin-top: 8px;
-        font-weight: 300;
     }
 
     .error-actions {
