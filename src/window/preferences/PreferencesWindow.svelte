@@ -85,7 +85,7 @@
     }
 
     .preference {
-        margin: 8px;
+        margin: 12px 8px;
     }
 
     .error {
