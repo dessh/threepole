@@ -43,36 +43,15 @@ struct PlayerDataPollerContainer(Mutex<PlayerDataPoller>);
 struct OverlayPollerHandle(Mutex<Option<JoinHandle<()>>>);
 
 // https://github.com/tauri-apps/wry/issues/583
-fn open_preferences_sync(handle: &AppHandle) -> Result<(), tauri::Error> {
-    match handle.get_window("preferences") {
-        Some(w) => w.set_focus(),
-        None => create_preferences_window(handle),
-    }
+#[tauri::command]
+async fn open_preferences(handle: AppHandle) -> Result<(), tauri::Error> {
+    open_preferences_window(&handle)
 }
 
 // https://github.com/tauri-apps/wry/issues/583
-fn open_profiles_sync(handle: &AppHandle) -> Result<(), tauri::Error> {
-    match handle.get_window("profiles") {
-        Some(w) => w.set_focus(),
-        None => create_profiles_window(handle),
-    }
-}
-
-fn open_details_sync(handle: &AppHandle) -> Result<(), tauri::Error> {
-    match handle.get_window("details") {
-        Some(w) => w.set_focus(),
-        None => create_details_window(handle),
-    }
-}
-
-#[tauri::command]
-async fn open_preferences(handle: AppHandle) -> Result<(), tauri::Error> {
-    open_preferences_sync(&handle)
-}
-
 #[tauri::command]
 async fn open_profiles(handle: AppHandle) -> Result<(), tauri::Error> {
-    open_profiles_sync(&handle)
+    open_profiles_window(&handle)
 }
 
 #[tauri::command]
@@ -120,7 +99,18 @@ async fn set_profiles(
     poller_container: State<'_, PlayerDataPollerContainer>,
 ) -> Result<(), ()> {
     let mut lock = config_container.0.lock().await;
+
+    let was_no_profile = lock.get_profiles().selected_profile.is_none();
+
     lock.set_profiles(profiles).unwrap();
+
+    if was_no_profile {
+        if handle.get_window("overlay").is_none() && lock.get_preferences().enable_overlay {
+            create_overlay(handle.clone()).await.unwrap();
+        }
+
+        open_details_window(&handle).unwrap();
+    }
 
     poller_container.0.lock().await.reset(handle).await;
 
@@ -207,7 +197,11 @@ async fn get_playerdata(
     Ok(poller_container.0.lock().await.get_data())
 }
 
-fn create_preferences_window(handle: &AppHandle) -> Result<(), tauri::Error> {
+fn open_preferences_window(handle: &AppHandle) -> Result<(), tauri::Error> {
+    if let Some(w) = handle.get_window("preferences") {
+        return w.set_focus();
+    }
+
     WindowBuilder::new(
         handle,
         "preferences",
@@ -223,7 +217,11 @@ fn create_preferences_window(handle: &AppHandle) -> Result<(), tauri::Error> {
     Ok(())
 }
 
-fn create_profiles_window(handle: &AppHandle) -> Result<(), tauri::Error> {
+fn open_profiles_window(handle: &AppHandle) -> Result<(), tauri::Error> {
+    if let Some(w) = handle.get_window("profiles") {
+        return w.set_focus();
+    }
+
     WindowBuilder::new(
         handle,
         "profiles",
@@ -239,7 +237,11 @@ fn create_profiles_window(handle: &AppHandle) -> Result<(), tauri::Error> {
     Ok(())
 }
 
-fn create_details_window(handle: &AppHandle) -> Result<(), tauri::Error> {
+fn open_details_window(handle: &AppHandle) -> Result<(), tauri::Error> {
+    if let Some(w) = handle.get_window("details") {
+        return w.set_focus();
+    }
+
     WindowBuilder::new(
         handle,
         "details",
@@ -255,13 +257,24 @@ fn create_details_window(handle: &AppHandle) -> Result<(), tauri::Error> {
     Ok(())
 }
 
+async fn activate(handle: &AppHandle) -> Result<(), tauri::Error> {
+    let config_container = handle.state::<ConfigContainer>();
+    let lock = config_container.0.lock().await;
+
+    if lock.get_profiles().selected_profile.is_none() {
+        open_profiles_window(&handle)
+    } else {
+        open_details_window(&handle)
+    }
+}
+
 async fn pipe_loop(handle: AppHandle, mut pipe_server: NamedPipeServer) -> io::Result<()> {
     loop {
         pipe_server.connect().await?;
         pipe_server = ServerOptions::new().create(NAMED_PIPE)?;
         pipe_server.disconnect()?;
 
-        open_details_sync(&handle).unwrap();
+        activate(&handle).await.unwrap();
     }
 }
 
@@ -303,12 +316,13 @@ async fn main() -> anyhow::Result<()> {
             if let SystemTrayEvent::MenuItemClick { id, .. } = event {
                 match id.as_str() {
                     "exit" => handle.exit(0),
-                    "set_profile" => open_profiles_sync(&handle).unwrap(),
-                    "preferences" => open_preferences_sync(&handle).unwrap(),
+                    "set_profile" => open_profiles_window(&handle).unwrap(),
+                    "preferences" => open_preferences_window(&handle).unwrap(),
                     _ => (),
                 }
             } else if let SystemTrayEvent::LeftClick { .. } = event {
-                open_details_sync(&handle).unwrap()
+                let handle_clone = handle.clone();
+                async_runtime::spawn(async move { activate(&handle_clone).await.unwrap() });
             }
         })
         .invoke_handler(tauri::generate_handler![
@@ -331,21 +345,21 @@ async fn main() -> anyhow::Result<()> {
 
             async_runtime::spawn(async move {
                 let config_container = handle.state::<ConfigContainer>();
-                let poller_container = handle.state::<PlayerDataPollerContainer>();
-
-                poller_container.0.lock().await.reset(handle.clone()).await;
-
                 let lock = config_container.0.lock().await;
 
                 if lock.get_profiles().selected_profile.is_none() {
-                    create_profiles_window(&handle).unwrap();
+                    open_profiles_window(&handle).unwrap();
+                } else {
+                    if lock.get_preferences().enable_overlay {
+                        create_overlay(handle.clone()).await.unwrap();
+                    }
+
+                    open_details_window(&handle).unwrap();
                 }
 
-                if lock.get_preferences().enable_overlay {
-                    create_overlay(handle.clone()).await.unwrap();
-                }
+                let poller_container = handle.state::<PlayerDataPollerContainer>();
 
-                create_details_window(&handle).unwrap();
+                poller_container.0.lock().await.reset(handle.clone()).await;
             });
 
             Ok(())

@@ -178,7 +178,7 @@
                     {wasNoSavedProfiles
                         ? savedProfiles.length == 0
                             ? "Get started by adding your Bungie account."
-                            : "Start the overlay by hitting confirm."
+                            : "Finish setup by hitting confirm."
                         : "Want to switch accounts?"}
                 </p>
             </div>
