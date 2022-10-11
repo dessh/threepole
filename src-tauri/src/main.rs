@@ -3,6 +3,8 @@
     windows_subsystem = "windows"
 )]
 
+use std::io;
+
 use api::{
     responses::{ActivityInfo, BungieProfile, ProfileInfo},
     Api, Source,
@@ -12,7 +14,7 @@ use config::{
     profiles::{Profile, Profiles},
     ConfigManager,
 };
-use consts::{APP_NAME, APP_VER};
+use consts::{APP_NAME, APP_VER, NAMED_PIPE};
 use pollers::{
     overlay::overlay_poller,
     playerdata::{PlayerDataPoller, PlayerDataStatus},
@@ -22,7 +24,10 @@ use tauri::{
     AppHandle, CustomMenuItem, Manager, RunEvent, State, SystemTray, SystemTrayEvent,
     SystemTrayMenu, SystemTrayMenuItem, WindowBuilder, WindowUrl,
 };
-use tokio::sync::Mutex;
+use tokio::{
+    net::windows::named_pipe::{ClientOptions, NamedPipeServer, ServerOptions},
+    sync::Mutex,
+};
 
 mod api;
 mod config;
@@ -38,29 +43,36 @@ struct PlayerDataPollerContainer(Mutex<PlayerDataPoller>);
 struct OverlayPollerHandle(Mutex<Option<JoinHandle<()>>>);
 
 // https://github.com/tauri-apps/wry/issues/583
-fn open_preferences_sync(handle: AppHandle) -> Result<(), tauri::Error> {
+fn open_preferences_sync(handle: &AppHandle) -> Result<(), tauri::Error> {
     match handle.get_window("preferences") {
         Some(w) => w.set_focus(),
-        None => create_preferences_window(&handle),
+        None => create_preferences_window(handle),
     }
 }
 
 // https://github.com/tauri-apps/wry/issues/583
-fn open_profiles_sync(handle: AppHandle) -> Result<(), tauri::Error> {
+fn open_profiles_sync(handle: &AppHandle) -> Result<(), tauri::Error> {
     match handle.get_window("profiles") {
         Some(w) => w.set_focus(),
-        None => create_profiles_window(&handle),
+        None => create_profiles_window(handle),
+    }
+}
+
+fn open_details_sync(handle: &AppHandle) -> Result<(), tauri::Error> {
+    match handle.get_window("details") {
+        Some(w) => w.set_focus(),
+        None => create_details_window(handle),
     }
 }
 
 #[tauri::command]
 async fn open_preferences(handle: AppHandle) -> Result<(), tauri::Error> {
-    open_preferences_sync(handle)
+    open_preferences_sync(&handle)
 }
 
 #[tauri::command]
 async fn open_profiles(handle: AppHandle) -> Result<(), tauri::Error> {
-    open_profiles_sync(handle)
+    open_profiles_sync(&handle)
 }
 
 #[tauri::command]
@@ -246,7 +258,30 @@ fn create_details_window(handle: &AppHandle) -> Result<(), tauri::Error> {
     Ok(())
 }
 
-fn main() -> anyhow::Result<()> {
+async fn pipe_loop(handle: AppHandle, pipe_server: NamedPipeServer) -> io::Result<()> {
+    loop {
+        pipe_server.connect().await?;
+        pipe_server.disconnect()?;
+
+        create_details_window(&handle).unwrap();
+    }
+}
+
+#[tokio::main]
+async fn main() -> anyhow::Result<()> {
+    let pipe_server = match ServerOptions::new()
+        .first_pipe_instance(true)
+        .create(NAMED_PIPE)
+    {
+        Ok(s) => s,
+        Err(_) => {
+            ClientOptions::new().open(NAMED_PIPE)?;
+            return Ok(());
+        }
+    };
+
+    tauri::async_runtime::set(tokio::runtime::Handle::current());
+
     tauri::Builder::new()
         .manage(ConfigContainer(Mutex::new(ConfigManager::load()?)))
         .manage(Api::default())
@@ -270,16 +305,12 @@ fn main() -> anyhow::Result<()> {
             if let SystemTrayEvent::MenuItemClick { id, .. } = event {
                 match id.as_str() {
                     "exit" => handle.exit(0),
-                    "set_profile" => open_profiles_sync(handle.clone()).unwrap(),
-                    "preferences" => open_preferences_sync(handle.clone()).unwrap(),
+                    "set_profile" => open_profiles_sync(&handle).unwrap(),
+                    "preferences" => open_preferences_sync(&handle).unwrap(),
                     _ => (),
                 }
             } else if let SystemTrayEvent::LeftClick { .. } = event {
-                match handle.get_window("details") {
-                    Some(w) => w.set_focus(),
-                    None => create_details_window(handle),
-                }
-                .unwrap()
+                open_details_sync(&handle).unwrap()
             }
         })
         .invoke_handler(tauri::generate_handler![
@@ -296,6 +327,9 @@ fn main() -> anyhow::Result<()> {
         ])
         .setup(|app| {
             let handle = app.handle();
+            let pipe_handle = handle.clone();
+
+            tokio::spawn(async move { pipe_loop(pipe_handle, pipe_server).await });
 
             async_runtime::spawn(async move {
                 let config_container = handle.state::<ConfigContainer>();
