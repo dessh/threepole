@@ -200,7 +200,6 @@ async fn get_playerdata(
 fn open_preferences_window(handle: &AppHandle) -> Result<(), tauri::Error> {
     if let Some(w) = handle.get_window("preferences") {
         w.unminimize()?;
-        w.show()?;
         return w.set_focus();
     }
 
@@ -222,7 +221,6 @@ fn open_preferences_window(handle: &AppHandle) -> Result<(), tauri::Error> {
 fn open_profiles_window(handle: &AppHandle) -> Result<(), tauri::Error> {
     if let Some(w) = handle.get_window("profiles") {
         w.unminimize()?;
-        w.show()?;
         return w.set_focus();
     }
 
@@ -244,7 +242,6 @@ fn open_profiles_window(handle: &AppHandle) -> Result<(), tauri::Error> {
 fn open_details_window(handle: &AppHandle) -> Result<(), tauri::Error> {
     if let Some(w) = handle.get_window("details") {
         w.unminimize()?;
-        w.show()?;
         return w.set_focus();
     }
 
