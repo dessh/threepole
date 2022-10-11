@@ -15,7 +15,7 @@ pub struct Preferences {
 impl Default for Preferences {
     fn default() -> Self {
         Self {
-            enable_overlay: true,
+            enable_overlay: false,
             display_daily_clears: true,
             display_clear_notifications: true,
             display_milliseconds: true,
