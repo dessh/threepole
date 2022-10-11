@@ -2,7 +2,6 @@
     import { invoke } from "@tauri-apps/api/tauri";
     import { appWindow } from "@tauri-apps/api/window";
     import LineButton from "../widgets/LineButton.svelte";
-    import Window from "../Window.svelte";
     import Loader from "../widgets/Loader.svelte";
     import ProfileWidget from "./ProfileWidget.svelte";
     import ProfileAddWidget from "./ProfileAddWidget.svelte";
@@ -170,7 +169,7 @@
     init();
 </script>
 
-<Window>
+<main>
     {#if savedProfiles}
         {#if !state.addPage}
             <div class="header">
@@ -289,7 +288,7 @@
             <Loader />
         </div>
     {/if}
-</Window>
+</main>
 
 <style>
     .header {

@@ -8,7 +8,6 @@
         TauriEvent,
     } from "../../types";
     import { countClears, formatMillis, formatTime } from "../../util";
-    import Window from "../Window.svelte";
     import PreviousRaid from "./PreviousRaid.svelte";
     import { RAID_ACTIVITY_TYPE } from "../../consts";
     import Dot from "./Dot.svelte";
@@ -81,7 +80,7 @@
     init();
 </script>
 
-<Window>
+<main>
     {#if playerData || error}
         <div class="header margin">
             <div class="status">
@@ -159,7 +158,7 @@
             <Loader />
         </div>
     {/if}
-</Window>
+</main>
 
 <style>
     .loader {

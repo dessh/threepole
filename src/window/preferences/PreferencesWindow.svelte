@@ -2,7 +2,6 @@
     import { invoke } from "@tauri-apps/api/tauri";
     import { appWindow } from "@tauri-apps/api/window";
     import LineButton from "../widgets/LineButton.svelte";
-    import Window from "../Window.svelte";
     import StyledCheckbox from "./StyledCheckbox.svelte";
     import type { Preferences } from "../../types";
 
@@ -29,7 +28,7 @@
     init();
 </script>
 
-<Window>
+<main>
     <h1>Preferences</h1>
     {#if preferences}
         <div class="preferences">
@@ -69,7 +68,7 @@
             </div>
         </div>
     {/if}
-</Window>
+</main>
 
 <style>
     h1 {

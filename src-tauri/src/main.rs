@@ -202,7 +202,6 @@ fn create_preferences_window(handle: &AppHandle) -> Result<(), tauri::Error> {
         WindowUrl::App("./src/window/window.html#preferences".into()),
     )
     .title(APP_NAME)
-    .transparent(true)
     .decorations(false)
     .inner_size(400.0, 500.0)
     .resizable(false)
@@ -220,7 +219,6 @@ fn create_profiles_window(handle: &AppHandle) -> Result<(), tauri::Error> {
         WindowUrl::App("./src/window/window.html#profiles".into()),
     )
     .title(APP_NAME)
-    .transparent(true)
     .decorations(false)
     .inner_size(400.0, 500.0)
     .resizable(false)
@@ -238,7 +236,6 @@ fn create_details_window(handle: &AppHandle) -> Result<(), tauri::Error> {
         WindowUrl::App("./src/window/window.html#details".into()),
     )
     .title(APP_NAME)
-    .transparent(true)
     .decorations(false)
     .inner_size(600.0, 600.0)
     .resizable(false)

@@ -1,8 +1,20 @@
 import "../global.css";
+import "./window.css";
 import ProfilesWindow from "./profiles/ProfilesWindow.svelte";
 import PreferencesWindow from "./preferences/PreferencesWindow.svelte";
 import DetailsWindow from "./details/DetailsWindow.svelte";
 import { appWindow } from "@tauri-apps/api/window";
+
+window.addEventListener("DOMContentLoaded", () => {
+    appWindow.show();
+    appWindow.setFocus();
+});
+
+document.addEventListener("contextmenu", (e) => e.preventDefault());
+
+document.querySelector("#exit-button").addEventListener("click", () => appWindow.close());
+
+const target = document.querySelector("#content");
 
 const app = getWindowType();
 
@@ -11,15 +23,15 @@ function getWindowType() {
     switch (windowType) {
         case "preferences":
             return new PreferencesWindow({
-                target: document.querySelector("body")
+                target
             });
         case "profiles":
             return new ProfilesWindow({
-                target: document.querySelector("body")
+                target
             });
         case "details":
             return new DetailsWindow({
-                target: document.querySelector("body")
+                target
             });
         default:
             appWindow.close();
