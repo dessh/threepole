@@ -13,6 +13,7 @@ window.addEventListener("DOMContentLoaded", () => {
 document.addEventListener("contextmenu", (e) => e.preventDefault());
 
 document.querySelector("#exit-button").addEventListener("click", () => appWindow.close());
+document.querySelector("#minimize-button").addEventListener("click", () => appWindow.minimize());
 
 const target = document.querySelector("#content");
 

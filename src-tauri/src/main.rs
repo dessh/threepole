@@ -217,7 +217,6 @@ fn create_preferences_window(handle: &AppHandle) -> Result<(), tauri::Error> {
     .decorations(false)
     .inner_size(400.0, 500.0)
     .resizable(false)
-    .always_on_top(true)
     .visible(false)
     .build()?;
 
@@ -234,7 +233,6 @@ fn create_profiles_window(handle: &AppHandle) -> Result<(), tauri::Error> {
     .decorations(false)
     .inner_size(400.0, 500.0)
     .resizable(false)
-    .always_on_top(true)
     .visible(false)
     .build()?;
 
@@ -251,7 +249,6 @@ fn create_details_window(handle: &AppHandle) -> Result<(), tauri::Error> {
     .decorations(false)
     .inner_size(600.0, 600.0)
     .resizable(false)
-    .always_on_top(true)
     .visible(false)
     .build()?;
 
