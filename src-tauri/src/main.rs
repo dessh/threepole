@@ -258,12 +258,13 @@ fn create_details_window(handle: &AppHandle) -> Result<(), tauri::Error> {
     Ok(())
 }
 
-async fn pipe_loop(handle: AppHandle, pipe_server: NamedPipeServer) -> io::Result<()> {
+async fn pipe_loop(handle: AppHandle, mut pipe_server: NamedPipeServer) -> io::Result<()> {
     loop {
         pipe_server.connect().await?;
+        pipe_server = ServerOptions::new().create(NAMED_PIPE)?;
         pipe_server.disconnect()?;
 
-        create_details_window(&handle).unwrap();
+        open_details_sync(&handle).unwrap();
     }
 }
 
