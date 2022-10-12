@@ -7,6 +7,7 @@ type BungieProfile = {
     membershipId: string;
     bungieGlobalDisplayName: string;
     bungieGlobalDisplayNameCode: number;
+    crossSaveOverride: number;
 };
 
 type Profiles = {

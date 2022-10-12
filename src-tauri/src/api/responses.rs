@@ -10,6 +10,7 @@ pub struct BungieProfile {
     membership_id: String,
     bungie_global_display_name: String,
     bungie_global_display_name_code: usize,
+    cross_save_override: usize,
 }
 
 #[derive(Debug, Serialize, Clone)]

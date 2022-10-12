@@ -65,6 +65,7 @@
                 membershipId: profile.accountId,
                 bungieGlobalDisplayName: profileInfo.displayName,
                 bungieGlobalDisplayNameCode: profileInfo.displayTag,
+                crossSaveOverride: null,
             };
 
             profiles.push(bungieProfile);
@@ -125,7 +126,13 @@
             displayName: args[0],
             displayNameCode: parseInt(args[1]),
         })
-            .then((p: BungieProfile[]) => (state.searchResults = p))
+            .then((profiles: BungieProfile[]) => {
+                state.searchResults = profiles.filter(
+                    (p) =>
+                        p.crossSaveOverride == 0 ||
+                        p.membershipType == p.crossSaveOverride
+                );
+            })
             .catch((e) => (state.error = e.message ?? e));
     }
 
