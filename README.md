@@ -25,5 +25,7 @@ Threepole is a clean, minimal raid tracker written in Rust and Svelte that displ
 
 Grab the latest release from this repo's [GitHub releases](https://github.com/dessh/threepole/releases) page.
 
+If you have any problems with installing or using threepole, feel free to ask in [Discord](https://discord.gg/dr3WWuwYty) or [open an issue](https://github.com/dessh/threepole/issues).
+
 ## Acknowledgements
 Thanks to **Giraf**, **Icy**, and the other testers during beta.
