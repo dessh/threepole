@@ -350,7 +350,7 @@ async fn main() -> anyhow::Result<()> {
             let handle = app.handle();
             let pipe_handle = handle.clone();
 
-            tokio::spawn(async move { pipe_loop(pipe_handle, pipe_server).await });
+            async_runtime::spawn(async move { pipe_loop(pipe_handle, pipe_server).await });
 
             async_runtime::spawn(async move {
                 let config_container = handle.state::<ConfigContainer>();
