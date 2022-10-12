@@ -46,8 +46,6 @@ struct CurrentActivity {
 pub struct PlayerDataPoller {
     task_handle: Option<JoinHandle<()>>,
     current_playerdata: Arc<Mutex<PlayerDataStatus>>,
-    // TODO: maybe add preferences/profiles the poller was started on to see if it needs a reset on change
-    // think about reset ting
 }
 
 impl PlayerDataPoller {
