@@ -17,7 +17,7 @@
             "active": true,
             "category": "Utility",
             "icon": [
-                "./icons/256x256.ico"
+                "./icons/icon.ico"
             ],
             "identifier": "sh.des.threepole",
             "shortDescription": " A minimal raid overlay for Destiny 2",
@@ -35,7 +35,7 @@
             "csp": "default-src 'self' object-src 'none'"
         },
         "systemTray": {
-            "iconPath": "./icons/20x20.ico"
+            "iconPath": "./icons/icon.ico"
         },
         "updater": {
             "active": true,
