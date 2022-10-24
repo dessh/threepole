@@ -14,4 +14,12 @@ const iconPaths = {
     6: epic,
 };
 
-export default iconPaths;
+const rrPlatforms = {
+    epic: 6,
+    pc: 3,
+    ps: 2,
+    stadia: 5,
+    xb: 1
+};
+
+export { iconPaths, rrPlatforms };

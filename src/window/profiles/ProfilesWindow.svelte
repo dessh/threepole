@@ -11,6 +11,7 @@
         ProfileInfo,
         Profile,
     } from "../../types";
+    import { rrPlatforms } from "./platforms/platforms";
 
     type State = {
         addPage: boolean;
@@ -116,24 +117,67 @@
         }
     }
 
-    function search() {
+    async function search() {
         state = defaultState(true);
         state.hasSearched = true;
 
-        let args = input.split("#");
+        try {
+            let segments = input.split("#");
+            if (segments.length > 1) {
+                let tag = Number(segments.pop());
 
-        invoke("search_profile", {
-            displayName: args[0],
-            displayNameCode: parseInt(args[1]),
-        })
-            .then((profiles: BungieProfile[]) => {
-                state.searchResults = profiles.filter(
-                    (p) =>
-                        p.crossSaveOverride == 0 ||
-                        p.membershipType == p.crossSaveOverride
+                if (!isNaN(tag) && tag >= 1 && tag <= 9999) {
+                    let profiles: BungieProfile[] = await invoke(
+                        "search_profile",
+                        {
+                            displayName: segments.join("#"),
+                            displayNameCode: tag,
+                        }
+                    );
+
+                    state.searchResults = profiles.filter(
+                        (p) =>
+                            p.crossSaveOverride == 0 ||
+                            p.membershipType == p.crossSaveOverride
+                    );
+
+                    return;
+                }
+            }
+
+            let path = input.split("/").filter((e) => e);
+            let platform = rrPlatforms[path[path.length - 2]];
+
+            if (path.length > 1 && platform) {
+                let profile: Profile = {
+                    accountPlatform: platform,
+                    accountId: path[path.length - 1],
+                };
+
+                let profileInfo: ProfileInfo = await invoke(
+                    "get_profile_info",
+                    {
+                        profile,
+                    }
                 );
-            })
-            .catch((e) => (state.error = e.message ?? e));
+
+                state.searchResults = [
+                    {
+                        membershipType: profile.accountPlatform,
+                        membershipId: profile.accountId,
+                        bungieGlobalDisplayName: profileInfo.displayName,
+                        bungieGlobalDisplayNameCode: profileInfo.displayTag,
+                        crossSaveOverride: null,
+                    },
+                ];
+
+                return;
+            }
+
+            throw "Enter a valid Bungie ID or Raid Report link.";
+        } catch (e) {
+            state.error = e.message ?? e;
+        }
     }
 
     function updatePlaceholder(newValue) {
@@ -148,8 +192,6 @@
                 shown: "#0000",
             };
         } else {
-            input =
-                split[0] + "#" + split[1].replaceAll(/\D/g, "").substring(0, 4);
             placeholder = { hidden: "", shown: "" };
         }
     }
@@ -220,7 +262,7 @@
                     >
                 </div>
                 <h1>Search</h1>
-                <p>Enter your Bungie ID below.</p>
+                <p>Enter your Bungie ID or Raid Report link below.</p>
             </div>
             <div class="search">
                 <p class="placeholder">
@@ -232,15 +274,13 @@
                     bind:value={input}
                     on:keydown={inputKeyDown}
                     spellcheck="false"
-                    maxlength="31"
                 /><button
                     bind:this={searchButton}
                     on:click={search}
                     disabled={(state.hasSearched &&
                         !state.searchResults &&
                         !state.error) ||
-                        !input.split("#")[0] ||
-                        !input.split("#")[1]}
+                        !input}
                     ><svg xmlns="http://www.w3.org/2000/svg">
                         <path
                             d="m19.6 21-6.3-6.3q-.75.6-1.725.95Q10.6 16 9.5 16q-2.725 0-4.612-1.887Q3 12.225 3 9.5q0-2.725 1.888-4.613Q6.775 3 9.5 3t4.613 1.887Q16 6.775 16 9.5q0 1.1-.35 2.075-.35.975-.95 1.725l6.3 6.3ZM9.5 14q1.875 0 3.188-1.312Q14 11.375 14 9.5q0-1.875-1.312-3.188Q11.375 5 9.5 5 7.625 5 6.312 6.312 5 7.625 5 9.5q0 1.875 1.312 3.188Q7.625 14 9.5 14Z"

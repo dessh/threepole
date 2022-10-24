@@ -1,6 +1,6 @@
 <script lang="ts">
     import type { BungieProfile } from "../../types";
-    import iconPaths from "./platforms/platforms";
+    import { iconPaths } from "./platforms/platforms";
 
     export let profile: BungieProfile;
     export let selected: boolean;
