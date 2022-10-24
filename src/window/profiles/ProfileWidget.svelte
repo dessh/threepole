@@ -32,8 +32,10 @@
     {#if deleteCallback}
         <button class="delete-button-component" on:click={deleteCallback}
             ><svg
-                class="delete-button-component"
                 xmlns="http://www.w3.org/2000/svg"
+                class="delete-button-component"
+                width="20"
+                height="20"
             >
                 <path
                     class="delete-button-component"
@@ -46,9 +48,9 @@
 
 <style>
     .profile {
+        display: flex;
         padding: 16px;
         padding-right: 12px;
-        text-align: left;
         border: 1px solid;
         border-image-source: linear-gradient(
             90deg,
@@ -59,6 +61,7 @@
         border-image-slice: 1;
         transition: border-image-source 0.1s;
         margin-top: 12px;
+        align-items: center;
     }
 
     .profile:hover {
@@ -81,8 +84,6 @@
         display: inline-block;
         width: 24px;
         height: 24px;
-        vertical-align: middle;
-        margin-right: 8px;
         background-size: contain;
         background-repeat: no-repeat;
         background-position: center;
@@ -90,11 +91,11 @@
 
     .profile span {
         font-size: 16px;
-        vertical-align: middle;
+        flex: 1;
+        margin: 0 12px;
     }
 
     .profile button {
-        vertical-align: middle;
         width: 24px;
         height: 24px;
         float: right;
