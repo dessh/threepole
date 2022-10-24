@@ -144,7 +144,7 @@
             placeholder = { hidden: "", shown: "Profile#0000" };
         } else if (split.length == 1) {
             placeholder = {
-                hidden: input.replaceAll(" ", "&nbsp;"),
+                hidden: input,
                 shown: "#0000",
             };
         } else {
@@ -360,7 +360,7 @@
         line-height: 40px;
         text-align: left;
         pointer-events: none;
-        white-space: nowrap;
+        white-space: pre;
     }
 
     .invisible {
