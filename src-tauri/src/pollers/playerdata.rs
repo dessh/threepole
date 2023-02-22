@@ -285,9 +285,15 @@ async fn update_history(
     let mut past_activities: Vec<CompletedActivity> = Vec::new();
 
     let cutoff = {
-        let mut time = Utc::today().and_hms(17, 0, 0); // 5PM UTC
+        let now = Utc::now();
+        let naive_cutoff = now
+            .date_naive()
+            .and_hms_opt(17, 0, 0)
+            .ok_or(anyhow!("There is no 5PM UTC today?"))?;
 
-        if time > Utc::now() {
+        let mut time = DateTime::<Utc>::from_utc(naive_cutoff, Utc);
+
+        if time > now {
             time -= chrono::Duration::days(1);
         }
 
