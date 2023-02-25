@@ -2,14 +2,15 @@ import "../global.css"
 import "./overlay.css"
 import { appWindow } from "@tauri-apps/api/window";
 import { invoke } from "@tauri-apps/api/tauri";
-import createPopup from "./popups";
+import { createPopup as _createPopup, type Popup } from "./popups";
 import type { TauriEvent, Preferences, CurrentActivity, PlayerDataStatus } from "../types";
 import { RAID_ACTIVITY_TYPE } from "../consts";
 import { countClears, formatMillis, formatTime } from "../util";
 
-const loaderElem = document.querySelector<HTMLElement>("#loader")!;
-const errorElem = document.querySelector<HTMLElement>("#error")!;
 const widgetElem = document.querySelector<HTMLElement>("#widget")!;
+const loaderElem = document.querySelector<HTMLElement>("#widget-loader")!;
+const errorElem = document.querySelector<HTMLElement>("#widget-error")!;
+const widgetContentElem = document.querySelector<HTMLElement>("#widget-content")!;
 const timerElem = document.querySelector<HTMLElement>("#timer")!;
 const timeElem = document.querySelector<HTMLElement>("#time")!;
 const msElem = document.querySelector<HTMLElement>("#ms")!;
@@ -54,6 +55,10 @@ async function init() {
     appWindow.listen("playerdata_update", (e: TauriEvent<PlayerDataStatus>) => refresh(e.payload));
 }
 
+function createPopup(popup: Popup) {
+    _createPopup(popup, shown);
+}
+
 function startTimerInterval() {
     if (!timerInterval && prefs) {
         timerInterval = setInterval(() => requestAnimationFrame(timerTick), 1000 / (prefs.displayMilliseconds ? 30 : 2));
@@ -71,7 +76,7 @@ function refresh(playerDataStatus: PlayerDataStatus) {
     let playerData = playerDataStatus?.lastUpdate;
 
     if (!playerData) {
-        widgetElem.classList.add("hidden");
+        widgetContentElem.classList.add("hidden");
 
         currentActivity = null;
         doneInitialRefresh = false;
@@ -90,7 +95,7 @@ function refresh(playerDataStatus: PlayerDataStatus) {
 
     loaderElem.classList.add("hidden");
     errorElem.classList.add("hidden");
-    widgetElem.classList.remove("hidden");
+    widgetContentElem.classList.remove("hidden");
 
     currentActivity = playerData.currentActivity;
 
@@ -148,5 +153,3 @@ function timerTick() {
 }
 
 init();
-
-export { shown };
