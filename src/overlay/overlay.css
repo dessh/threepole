@@ -1,14 +1,15 @@
-.corner {
+#widget {
     position: absolute;
-    left: 16px;
-    top: 12px;
+    top: 0;
+    left: 0;
+    padding: 12px 16px;
 }
 
 .hidden {
     display: none;
 }
 
-#widget {
+#widget-content {
     text-shadow: 1px 1px 2px #000;
     font-size: 20px;
     color: #fff;
@@ -19,16 +20,16 @@ svg {
     filter: drop-shadow(1px 1px 2px #000);
 }
 
-#widget span {
+#widget-content span {
     vertical-align: middle;
 }
 
-#widget svg {
+#widget-content svg {
     fill: #aaa;
     vertical-align: middle;
     margin-right: 10px;
 }
 
-#widget .grey {
+#widget-content .grey {
     color: #aaa;
 }

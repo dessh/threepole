@@ -1,8 +1,7 @@
 import { appWindow } from "@tauri-apps/api/window";
-import { shown } from "./overlay";
 import "./popups.css";
 
-type Popup = {
+export type Popup = {
     title: string,
     subtext: string,
 };
@@ -50,12 +49,10 @@ function showQueuedPopups() {
     queuedPopups = [];
 }
 
-function createPopup(popup: Popup) {
+export function createPopup(popup: Popup, showImmediately: boolean) {
     queuedPopups.push(popup);
 
-    if (shown) {
+    if (showImmediately) {
         showQueuedPopups();
     }
 }
-
-export default createPopup;
