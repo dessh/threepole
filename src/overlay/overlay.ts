@@ -3,7 +3,7 @@ import "./overlay.css"
 import { appWindow } from "@tauri-apps/api/window";
 import { createPopup as _createPopup, type Popup } from "./popups";
 import type { TauriEvent, Preferences, CurrentActivity, PlayerDataStatus } from "../core/types";
-import { RAID_ACTIVITY_TYPE } from "../core/consts";
+import { RAID_ACTIVITY_MODE } from "../core/consts";
 import { countClears, formatMillis, formatTime } from "../core/util";
 import { getPlayerdata, getPreferences } from "../core/ipc";
 
@@ -99,7 +99,7 @@ function refresh(playerDataStatus: PlayerDataStatus) {
 
     currentActivity = playerData.currentActivity;
 
-    if (currentActivity?.activityInfo?.activityTypeHash == RAID_ACTIVITY_TYPE) {
+    if (currentActivity?.activityInfo?.activityModes.includes(RAID_ACTIVITY_MODE)) {
         timerElem.classList.remove("hidden");
     } else {
         timerElem.classList.add("hidden");
@@ -143,7 +143,7 @@ function applyPreferences(p: Preferences) {
 }
 
 function timerTick() {
-    if (!shown || currentActivity?.activityInfo?.activityTypeHash != RAID_ACTIVITY_TYPE) {
+    if (!shown || currentActivity?.activityInfo?.activityModes.includes(RAID_ACTIVITY_MODE)) {
         return;
     }
 
