@@ -53,7 +53,7 @@ export type CurrentActivity = {
 
 export type ActivityInfo = {
     name: string;
-    activityTypeHash: number;
+    activityModes: number[];
     backgroundImage: string;
 };
 

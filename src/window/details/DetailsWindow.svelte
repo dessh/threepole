@@ -9,8 +9,8 @@
     import { countClears, formatMillis, formatTime } from "../../core/util";
     import PreviousRaid from "./PreviousRaid.svelte";
     import {
+        RAID_ACTIVITY_MODE,
         DISCORD_INVITE,
-        RAID_ACTIVITY_TYPE,
         REPOSITORY_LINK,
     } from "../../core/consts";
     import Dot from "./Dot.svelte";
@@ -31,8 +31,9 @@
 
     function timerTick() {
         if (
-            playerData?.currentActivity?.activityInfo?.activityTypeHash !=
-            RAID_ACTIVITY_TYPE
+            playerData?.currentActivity?.activityInfo?.activityModes.includes(
+                RAID_ACTIVITY_MODE
+            )
         ) {
             return;
         }
@@ -113,7 +114,7 @@
         <div class="header margin">
             <div class="status">
                 {#if playerData}
-                    {#if playerData.currentActivity?.activityInfo?.activityTypeHash == RAID_ACTIVITY_TYPE}
+                    {#if playerData.currentActivity?.activityInfo?.activityModes.includes(RAID_ACTIVITY_MODE)}
                         <h1>
                             {timeText}<span class="small grey">{msText}</span>
                         </h1>
