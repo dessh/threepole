@@ -5,7 +5,7 @@ import bnet from "./bnet.svg";
 import stadia from "./stadia.svg";
 import epic from "./epic.svg";
 
-const iconPaths = {
+export const iconPaths = {
     1: xbox,
     2: ps,
     3: steam,
@@ -14,12 +14,10 @@ const iconPaths = {
     6: epic,
 };
 
-const rrPlatforms = {
+export const rrPlatforms = {
     epic: 6,
     pc: 3,
     ps: 2,
     stadia: 5,
     xb: 1
 };
-
-export { iconPaths, rrPlatforms };

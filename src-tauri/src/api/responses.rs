@@ -151,6 +151,7 @@ pub struct CompletedActivity {
     pub period: DateTime<Utc>,
     pub instance_id: String,
     pub activity_hash: usize,
+    pub modes: Vec<usize>,
     pub completed: bool,
     pub activity_duration: String,
     pub activity_duration_seconds: usize,
@@ -186,6 +187,7 @@ impl<'de> Deserialize<'de> for CompletedActivity {
         struct _ActivityDetails {
             instance_id: String,
             director_activity_hash: usize,
+            modes: Vec<usize>,
         }
 
         #[derive(Deserialize)]
@@ -214,6 +216,7 @@ impl<'de> Deserialize<'de> for CompletedActivity {
             period: activity.period,
             instance_id: activity.activity_details.instance_id,
             activity_hash: activity.activity_details.director_activity_hash,
+            modes: activity.activity_details.modes,
             completed: activity.values.completed.basic.value == 1.0
                 && activity.values.completion_reason.basic.value == 0.0,
             activity_duration: activity

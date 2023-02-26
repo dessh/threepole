@@ -1,21 +1,21 @@
 <script lang="ts">
-    import { invoke } from "@tauri-apps/api/tauri";
     import { appWindow } from "@tauri-apps/api/window";
     import type {
         ActivityInfo,
         PlayerData,
         PlayerDataStatus,
         TauriEvent,
-    } from "../../types";
-    import { countClears, formatMillis, formatTime } from "../../util";
+    } from "../../core/types";
+    import { countClears, formatMillis, formatTime } from "../../core/util";
     import PreviousRaid from "./PreviousRaid.svelte";
     import {
         DISCORD_INVITE,
         RAID_ACTIVITY_TYPE,
         REPOSITORY_LINK,
-    } from "../../consts";
+    } from "../../core/consts";
     import Dot from "./Dot.svelte";
     import Loader from "../widgets/Loader.svelte";
+    import * as ipc from "../../core/ipc";
 
     let timeText = "";
     let msText = "";
@@ -50,16 +50,14 @@
             return activityInfoMap[hash];
         }
 
-        let activityInfo: ActivityInfo = await invoke("get_activity_info", {
-            activityHash: hash,
-        });
+        let activityInfo = await ipc.getActivityInfo(hash);
 
         activityInfoMap[hash] = activityInfo;
 
         return activityInfo;
     }
 
-    function handleUpdate(status: PlayerDataStatus) {
+    function handleUpdate(status: PlayerDataStatus | null) {
         playerData = status?.lastUpdate;
         error = status?.error;
 
@@ -71,7 +69,7 @@
     }
 
     async function init() {
-        handleUpdate(await invoke("get_playerdata"));
+        handleUpdate(await ipc.getPlayerdata());
 
         appWindow.listen(
             "playerdata_update",
@@ -137,21 +135,24 @@
                     <div class="error-actions">
                         <p>If this persists, consider:</p>
                         <li>
-                            Joining the <a href={DISCORD_INVITE} target="_blank"
-                                >Discord</a
+                            Joining the <a
+                                href={DISCORD_INVITE}
+                                target="_blank"
+                                rel="noreferrer">Discord</a
                             > for support
                         </li>
                         <li>
                             Opening an issue on <a
                                 href={REPOSITORY_LINK}
-                                target="_blank">GitHub</a
+                                target="_blank"
+                                rel="noreferrer">GitHub</a
                             >
                         </li>
                     </div>
                 {/if}
             </div>
             <div class="actions">
-                <button on:click={() => invoke("open_profiles")}>
+                <button on:click={() => ipc.openProfiles()}>
                     <svg
                         xmlns="http://www.w3.org/2000/svg"
                         height="24"
@@ -161,7 +162,7 @@
                         /></svg
                     >
                 </button>
-                <button on:click={() => invoke("open_preferences")}>
+                <button on:click={() => ipc.openPreferences()}>
                     <svg
                         xmlns="http://www.w3.org/2000/svg"
                         height="24"

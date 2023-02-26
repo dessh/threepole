@@ -1,8 +1,8 @@
-type TauriEvent<T> = {
+export type TauriEvent<T> = {
     payload: T
 };
 
-type BungieProfile = {
+export type BungieProfile = {
     membershipType: number;
     membershipId: string;
     bungieGlobalDisplayName: string;
@@ -10,60 +10,59 @@ type BungieProfile = {
     crossSaveOverride: number;
 };
 
-type Profiles = {
+export type Profiles = {
     savedProfiles: Profile[],
     selectedProfile: Profile,
 }
 
-type Profile = {
+export type Profile = {
     accountPlatform: number;
     accountId: string;
 };
 
-type ProfileInfo = {
+export type ProfileInfo = {
     privacy: number;
     displayName: string;
     displayTag: number;
     characterIds: string[];
 };
 
-type Preferences = {
+export type Preferences = {
     enableOverlay: boolean;
     displayDailyClears: boolean;
     displayClearNotifications: boolean;
     displayMilliseconds: boolean;
 };
 
-type PlayerDataStatus = {
+export type PlayerDataStatus = {
     lastUpdate: PlayerData,
     error: string,
 }
 
-type PlayerData = {
+export type PlayerData = {
     currentActivity: CurrentActivity;
     activityHistory: CompletedActivity[];
     profileInfo: ProfileInfo;
 };
 
-type CurrentActivity = {
+export type CurrentActivity = {
     startDate: string;
     activityHash: number;
     activityInfo: ActivityInfo;
 };
 
-type ActivityInfo = {
+export type ActivityInfo = {
     name: string;
     activityTypeHash: number;
     backgroundImage: string;
-}
+};
 
-type CompletedActivity = {
+export type CompletedActivity = {
     period: string;
     instanceId: string;
     completed: boolean;
     activityDuration: string;
     activityDurationSeconds: number;
     activityHash: number;
-}
-
-export type { TauriEvent, BungieProfile, Profiles, Profile, ProfileInfo, Preferences, PlayerDataStatus, PlayerData, CurrentActivity, ActivityInfo, CompletedActivity };
+    modes: number[];
+};
