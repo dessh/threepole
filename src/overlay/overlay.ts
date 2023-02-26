@@ -1,11 +1,11 @@
-import "../global.css"
+import "../core/global.css"
 import "./overlay.css"
 import { appWindow } from "@tauri-apps/api/window";
-import { invoke } from "@tauri-apps/api/tauri";
 import { createPopup as _createPopup, type Popup } from "./popups";
-import type { TauriEvent, Preferences, CurrentActivity, PlayerDataStatus } from "../types";
-import { RAID_ACTIVITY_TYPE } from "../consts";
-import { countClears, formatMillis, formatTime } from "../util";
+import type { TauriEvent, Preferences, CurrentActivity, PlayerDataStatus } from "../core/types";
+import { RAID_ACTIVITY_TYPE } from "../core/consts";
+import { countClears, formatMillis, formatTime } from "../core/util";
+import { getPlayerdata, getPreferences } from "../core/ipc";
 
 const widgetElem = document.querySelector<HTMLElement>("#widget")!;
 const loaderElem = document.querySelector<HTMLElement>("#widget-loader")!;
@@ -48,8 +48,8 @@ async function init() {
         stopTimerInterval();
     });
 
-    applyPreferences(await invoke("get_preferences"));
-    refresh(await invoke("get_playerdata"));
+    applyPreferences(await getPreferences());
+    refresh(await getPlayerdata());
 
     appWindow.listen("preferences_update", (p: TauriEvent<Preferences>) => applyPreferences(p.payload));
     appWindow.listen("playerdata_update", (e: TauriEvent<PlayerDataStatus>) => refresh(e.payload));

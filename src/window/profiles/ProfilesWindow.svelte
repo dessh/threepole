@@ -1,17 +1,12 @@
 <script lang="ts">
-    import { invoke } from "@tauri-apps/api/tauri";
     import { appWindow } from "@tauri-apps/api/window";
     import LineButton from "../widgets/LineButton.svelte";
     import Loader from "../widgets/Loader.svelte";
     import ProfileWidget from "./ProfileWidget.svelte";
     import ProfileAddWidget from "./ProfileAddWidget.svelte";
-    import type {
-        BungieProfile,
-        Profiles,
-        ProfileInfo,
-        Profile,
-    } from "../../types";
+    import type { BungieProfile, ProfileInfo, Profile } from "../../core/types";
     import { rrPlatforms } from "./platforms/platforms";
+    import * as ipc from "../../core/ipc";
 
     type State = {
         addPage: boolean;
@@ -46,7 +41,7 @@
     }
 
     async function init() {
-        let p: Profiles = await invoke("get_profiles");
+        let p = await ipc.getProfiles();
 
         let profiles: BungieProfile[] = [];
 
@@ -54,9 +49,7 @@
             let profileInfo: ProfileInfo;
 
             try {
-                profileInfo = await invoke("get_profile_info", {
-                    profile,
-                });
+                profileInfo = await ipc.getProfileInfo(profile);
             } catch (e) {
                 continue;
             }
@@ -127,12 +120,9 @@
                 let tag = Number(segments.pop());
 
                 if (!isNaN(tag) && tag >= 1 && tag <= 9999) {
-                    let profiles: BungieProfile[] = await invoke(
-                        "search_profile",
-                        {
-                            displayName: segments.join("#"),
-                            displayNameCode: tag,
-                        }
+                    let profiles = await ipc.searchProfile(
+                        segments.join("#"),
+                        tag
                     );
 
                     state.searchResults = profiles.filter(
@@ -154,12 +144,7 @@
                     accountId: path[path.length - 1],
                 };
 
-                let profileInfo: ProfileInfo = await invoke(
-                    "get_profile_info",
-                    {
-                        profile,
-                    }
-                );
+                let profileInfo = await ipc.getProfileInfo(profile);
 
                 state.searchResults = [
                     {
@@ -207,11 +192,9 @@
         let newSavedProfiles = savedProfiles.map((p) => convertProfile(p));
         let newSelectedProfile = convertProfile(selectedProfile);
 
-        invoke("set_profiles", {
-            profiles: {
-                savedProfiles: newSavedProfiles,
-                selectedProfile: newSelectedProfile,
-            },
+        ipc.setProfiles({
+            savedProfiles: newSavedProfiles,
+            selectedProfile: newSelectedProfile,
         }).then(() => appWindow.close());
     }
 

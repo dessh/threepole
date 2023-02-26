@@ -1,4 +1,4 @@
-import "../global.css";
+import "../core/global.css";
 import "./window.css";
 import ProfilesWindow from "./profiles/ProfilesWindow.svelte";
 import PreferencesWindow from "./preferences/PreferencesWindow.svelte";

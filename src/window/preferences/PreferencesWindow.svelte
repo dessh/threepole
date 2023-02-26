@@ -1,21 +1,19 @@
 <script lang="ts">
-    import { invoke } from "@tauri-apps/api/tauri";
     import { appWindow } from "@tauri-apps/api/window";
     import LineButton from "../widgets/LineButton.svelte";
     import StyledCheckbox from "./StyledCheckbox.svelte";
-    import type { Preferences } from "../../types";
+    import type { Preferences } from "../../core/types";
+    import * as ipc from "../../core/ipc";
 
     let preferences: Preferences;
     let error: string;
 
     function init() {
-        invoke("get_preferences").then((p: Preferences) => (preferences = p));
+        ipc.getPreferences().then((p: Preferences) => (preferences = p));
     }
 
     function confirm() {
-        invoke("set_preferences", {
-            preferences,
-        })
+        ipc.setPreferences(preferences)
             .then(() => appWindow.close())
             .catch((e) => {
                 error = e.message ?? e;
