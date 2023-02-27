@@ -32,7 +32,7 @@
 
     function timerTick() {
         if (
-            determineActivityType(
+            !determineActivityType(
                 playerData?.currentActivity?.activityInfo?.activityModes
             )
         ) {
