@@ -6,13 +6,14 @@
         PlayerDataStatus,
         TauriEvent,
     } from "../../core/types";
-    import { countClears, formatMillis, formatTime } from "../../core/util";
-    import PreviousRaid from "./PreviousRaid.svelte";
     import {
-        RAID_ACTIVITY_MODE,
-        DISCORD_INVITE,
-        REPOSITORY_LINK,
-    } from "../../core/consts";
+        countClears,
+        determineActivityType,
+        formatMillis,
+        formatTime,
+    } from "../../core/util";
+    import PreviousRaid from "./PreviousRaid.svelte";
+    import { DISCORD_INVITE, REPOSITORY_LINK } from "../../core/consts";
     import Dot from "./Dot.svelte";
     import Loader from "../widgets/Loader.svelte";
     import * as ipc from "../../core/ipc";
@@ -31,8 +32,8 @@
 
     function timerTick() {
         if (
-            playerData?.currentActivity?.activityInfo?.activityModes.includes(
-                RAID_ACTIVITY_MODE
+            determineActivityType(
+                playerData?.currentActivity?.activityInfo?.activityModes
             )
         ) {
             return;
@@ -114,7 +115,7 @@
         <div class="header margin">
             <div class="status">
                 {#if playerData}
-                    {#if playerData.currentActivity?.activityInfo?.activityModes.includes(RAID_ACTIVITY_MODE)}
+                    {#if determineActivityType(playerData.currentActivity?.activityInfo?.activityModes)}
                         <h1>
                             {timeText}<span class="small grey">{msText}</span>
                         </h1>
@@ -128,7 +129,7 @@
                                 >#{playerData.profileInfo.displayTag}</span
                             >
                         </h1>
-                        <h2 class="grey">NOT IN RAID</h2>
+                        <h2 class="grey">NOT IN ACTIVITY</h2>
                     {/if}
                 {:else}
                     <h1 class="small">Error</h1>
@@ -178,7 +179,7 @@
         {#if playerData}
             <div class="margin">
                 <p class="summary">
-                    <span>Today's raids</span>
+                    <span>Today's activities</span>
                     <span class="key">
                         <span class="item">
                             <Dot completed={true} />{countedClears}
@@ -195,7 +196,7 @@
                     {/await}
                 {/each}
                 {#if playerData.activityHistory.length == 0}
-                    <p class="list-empty">No raids completed today.</p>
+                    <p class="list-empty">No activities completed today.</p>
                 {/if}
             </div>
         {/if}

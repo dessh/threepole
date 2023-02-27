@@ -20,7 +20,7 @@
                 "./icons/icon.ico"
             ],
             "identifier": "sh.des.threepole",
-            "shortDescription": " A minimal raid overlay for Destiny 2",
+            "shortDescription": " A minimal timer overlay for Destiny 2",
             "targets": [
                 "msi",
                 "updater"
