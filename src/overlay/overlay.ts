@@ -3,8 +3,7 @@ import "./overlay.css"
 import { appWindow } from "@tauri-apps/api/window";
 import { createPopup as _createPopup, type Popup } from "./popups";
 import type { TauriEvent, Preferences, CurrentActivity, PlayerDataStatus } from "../core/types";
-import { RAID_ACTIVITY_MODE } from "../core/consts";
-import { countClears, formatMillis, formatTime } from "../core/util";
+import { countClears, determineActivityType, formatMillis, formatTime } from "../core/util";
 import { getPlayerdata, getPreferences } from "../core/ipc";
 
 const widgetElem = document.querySelector<HTMLElement>("#widget")!;
@@ -31,10 +30,10 @@ async function init() {
             return;
         }
 
-        startTimerInterval();
-
         appWindow.show();
         shown = true;
+
+        checkTimerInterval();
     });
 
     appWindow.listen("hide", () => {
@@ -45,7 +44,7 @@ async function init() {
         appWindow.hide();
         shown = false;
 
-        stopTimerInterval();
+        checkTimerInterval();
     });
 
     applyPreferences(await getPreferences());
@@ -59,16 +58,18 @@ function createPopup(popup: Popup) {
     _createPopup(popup, shown);
 }
 
-function startTimerInterval() {
-    if (!timerInterval && prefs) {
-        timerInterval = setInterval(() => requestAnimationFrame(timerTick), 1000 / (prefs.displayMilliseconds ? 30 : 2));
-    }
-}
-
-function stopTimerInterval() {
-    if (timerInterval) {
+function checkTimerInterval() {
+    if (!prefs || !shown || !determineActivityType(currentActivity?.activityInfo?.activityModes)) {
         clearTimeout(timerInterval);
         timerInterval = null;
+        timerElem.classList.add("hidden");
+        return;
+    }
+
+    timerElem.classList.remove("hidden");
+
+    if (!timerInterval) {
+        timerInterval = setInterval(() => requestAnimationFrame(timerTick), 1000 / (prefs.displayMilliseconds ? 30 : 2));
     }
 }
 
@@ -99,19 +100,19 @@ function refresh(playerDataStatus: PlayerDataStatus) {
 
     currentActivity = playerData.currentActivity;
 
-    if (currentActivity?.activityInfo?.activityModes.includes(RAID_ACTIVITY_MODE)) {
-        timerElem.classList.remove("hidden");
-    } else {
-        timerElem.classList.add("hidden");
-    }
-
+    checkTimerInterval();
 
     dailyElem.innerText = String(countClears(playerData.activityHistory));
 
     let latestRaid = playerData.activityHistory[0];
 
-    if (doneInitialRefresh && latestRaid && lastRaidId != latestRaid.instanceId && latestRaid.completed && prefs.displayClearNotifications) {
-        createPopup({ title: "Raid clear result", subtext: `API Time: <strong>${latestRaid.activityDuration}</strong>` });
+    if (doneInitialRefresh && latestRaid?.completed && lastRaidId != latestRaid.instanceId && prefs.displayClearNotifications) {
+        const type = determineActivityType(latestRaid.modes);
+
+        if (type) {
+            const typeFormatted = type.charAt(0).toUpperCase() + type.slice(1);
+            createPopup({ title: `${typeFormatted} clear result`, subtext: `API Time: <strong>${latestRaid.activityDuration}</strong>` });
+        }
     }
 
     lastRaidId = latestRaid?.instanceId;
@@ -138,15 +139,13 @@ function applyPreferences(p: Preferences) {
         msElem.classList.add("hidden");
     }
 
-    stopTimerInterval();
-    startTimerInterval();
+    clearTimeout(timerInterval);
+    timerInterval = null;
+
+    checkTimerInterval();
 }
 
 function timerTick() {
-    if (!shown || currentActivity?.activityInfo?.activityModes.includes(RAID_ACTIVITY_MODE)) {
-        return;
-    }
-
     let millis = Number(new Date()) - Number(new Date(currentActivity.startDate));
     timeElem.innerHTML = formatTime(millis);
     msElem.innerHTML = formatMillis(millis);

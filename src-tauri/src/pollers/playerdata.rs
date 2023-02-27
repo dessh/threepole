@@ -16,6 +16,7 @@ use crate::{
         Api, ApiError, Source,
     },
     config::profiles::Profile,
+    consts::{DUNGEON_ACTIVITY_MODE, RAID_ACTIVITY_MODE, STRIKE_ACTIVITY_MODE},
     ConfigContainer,
 };
 
@@ -316,7 +317,11 @@ async fn update_history(
             for activity in activities.into_iter() {
                 if activity.period < cutoff {
                     includes_past_cutoff = true;
-                } else {
+                } else if activity.modes.iter().any(|m| {
+                    *m == RAID_ACTIVITY_MODE
+                        || *m == DUNGEON_ACTIVITY_MODE
+                        || *m == STRIKE_ACTIVITY_MODE
+                }) {
                     past_activities.push(activity);
                 }
             }

@@ -159,7 +159,7 @@
                 return;
             }
 
-            throw "Enter a valid Bungie ID or Raid Report link.";
+            throw "Enter a valid Bungie ID or Raid/Dungeon Report link.";
         } catch (e) {
             state.error = e.message ?? e;
         }
@@ -245,7 +245,7 @@
                     >
                 </div>
                 <h1>Search</h1>
-                <p>Enter your Bungie ID or Raid Report link below.</p>
+                <p>Enter your Bungie ID or Raid/Dungeon Report link below.</p>
             </div>
             <div class="search">
                 <p class="placeholder">
