@@ -248,7 +248,7 @@ impl<'de> Deserialize<'de> for ActivityInfo {
         #[derive(Deserialize)]
         #[serde(rename_all = "camelCase")]
         struct _Activity {
-            display_properties: _DisplayProperties,
+            original_display_properties: _DisplayProperties,
             activity_mode_types: Option<Vec<usize>>,
             activity_type_hash: usize,
             pgcr_image: Option<String>,
@@ -273,7 +273,7 @@ impl<'de> Deserialize<'de> for ActivityInfo {
 
         let activity = _Activity::deserialize(deserializer)?;
         Ok(Self {
-            name: activity.display_properties.name,
+            name: activity.original_display_properties.name,
             activity_modes: activity
                 .activity_mode_types
                 .unwrap_or_else(|| modes_from_hash(activity.activity_type_hash)),
