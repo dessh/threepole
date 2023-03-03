@@ -1,4 +1,4 @@
-import { DUNGEON_ACTIVITY_MODE, RAID_ACTIVITY_MODE, STRIKE_ACTIVITY_MODE } from "./consts";
+import { ACTIVITY_TYPES } from "./consts";
 import type { CompletedActivity } from "./types";
 
 export function formatTime(millis: number): string {
@@ -28,14 +28,14 @@ export function countClears(activityHistory: CompletedActivity[]): number {
     return clearCount;
 }
 
-export function determineActivityType(modes: number[]): 'raid' | 'dungeon' | 'strike' | null {
-    if (modes?.includes(RAID_ACTIVITY_MODE)) {
-        return 'raid';
-    } else if (modes?.includes(DUNGEON_ACTIVITY_MODE)) {
-        return 'dungeon';
-    } else if (modes?.includes(STRIKE_ACTIVITY_MODE)) {
-        return 'strike';
-    } else {
-        return null;
+export function determineActivityType(modes: number[]): string | undefined {
+    if (!modes) {
+        return;
+    }
+
+    for (const mode of modes) {
+        if (ACTIVITY_TYPES[mode]) {
+            return ACTIVITY_TYPES[mode];
+        }
     }
 }

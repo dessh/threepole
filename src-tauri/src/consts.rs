@@ -11,3 +11,4 @@ pub const NAMED_PIPE: &str = r"\\.\pipe\threepole-open";
 pub const RAID_ACTIVITY_MODE: usize = 4;
 pub const DUNGEON_ACTIVITY_MODE: usize = 82;
 pub const STRIKE_ACTIVITY_MODE: usize = 18;
+pub const LOSTSECTOR_ACTIVITY_MODE: usize = 87;
