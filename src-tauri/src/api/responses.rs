@@ -3,6 +3,8 @@ use std::{cmp::Ordering, collections::HashMap};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Deserializer, Serialize};
 
+use crate::consts::{RAID_ACTIVITY_HASH, RAID_ACTIVITY_MODE};
+
 #[derive(Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BungieProfile {
@@ -248,6 +250,7 @@ impl<'de> Deserialize<'de> for ActivityInfo {
         struct _Activity {
             display_properties: _DisplayProperties,
             activity_mode_types: Option<Vec<usize>>,
+            activity_type_hash: usize,
             pgcr_image: Option<String>,
         }
 
@@ -257,10 +260,23 @@ impl<'de> Deserialize<'de> for ActivityInfo {
             name: String,
         }
 
+        // No activity modes in raid definitions :(
+        fn modes_from_hash(hash: usize) -> Vec<usize> {
+            let mut v = vec![];
+
+            if hash == RAID_ACTIVITY_HASH {
+                v.push(RAID_ACTIVITY_MODE);
+            }
+
+            v
+        }
+
         let activity = _Activity::deserialize(deserializer)?;
         Ok(Self {
             name: activity.display_properties.name,
-            activity_modes: activity.activity_mode_types.unwrap_or_default(),
+            activity_modes: activity
+                .activity_mode_types
+                .unwrap_or_else(|| modes_from_hash(activity.activity_type_hash)),
             background_image: activity.pgcr_image,
         })
     }
