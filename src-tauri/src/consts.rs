@@ -7,6 +7,7 @@ pub const APP_VER: &str = env!("CARGO_PKG_VERSION");
 pub const API_KEY: &str = env!("BUNGIE_API_KEY");
 pub const API_PATH: &str = "https://www.bungie.net/Platform";
 pub const NAMED_PIPE: &str = r"\\.\pipe\threepole-open";
+pub const USER_AGENT: &str = concat!("threepole/", env!("CARGO_PKG_VERSION"));
 
 pub const RAID_ACTIVITY_MODE: usize = 4;
 pub const DUNGEON_ACTIVITY_MODE: usize = 82;
